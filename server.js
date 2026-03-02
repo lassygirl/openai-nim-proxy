@@ -220,9 +220,18 @@ app.post('/v1/chat/completions', async (req, res) => {
     }
 
   } catch (err) {
+    const nimError = err.response?.data;
     console.error('Proxy error:', err.message);
+    console.error('NIM full error:', JSON.stringify(nimError));
+    console.error('NIM model attempted:', nimRequest?.model);
     res.status(err.response?.status || 500).json({
-      error: { message: err.message || 'Internal server error', type: 'invalid_request_error', code: err.response?.status || 500 }
+      error: {
+        message: nimError?.detail || nimError?.message || err.message || 'Internal server error',
+        nim_response: nimError,
+        model_attempted: nimRequest?.model,
+        type: 'invalid_request_error',
+        code: err.response?.status || 500
+      }
     });
   }
 });
