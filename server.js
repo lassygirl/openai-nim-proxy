@@ -32,24 +32,24 @@ const ENABLE_THINKING_MODE = false;
 
 const MODEL_MAPPING = {
   // ── Latest / Flagship ──────────────────────────────────────────────────
-  'gpt-4o':          'deepseek-ai/deepseek-v3_2',          // DeepSeek V3.2 (685B, GPT-5 class)
-  'gpt-4-turbo':     'moonshotai/kimi-k2-5',               // Kimi K2.5 (multimodal, 1T MoE)
-  'gpt-4':           'zai-org/GLM-5',                      // GLM-5 (744B, best open-source agentic)
+  'gpt-4o':          'deepseek-ai/deepseek-v3.2',          // DeepSeek V3.2 685B
+  'gpt-4-turbo':     'moonshotai/kimi-k2-5',               // Kimi K2.5 multimodal
+  'gpt-4':           'z-ai/glm5',                          // GLM-5 744B
 
   // ── Strong Reasoning ───────────────────────────────────────────────────
-  'gpt-4-32k':       'nvidia/llama-3.1-nemotron-ultra-253b-v1', // Nemotron Ultra 253B
-  'gemini-pro':      'qwen/qwen3-next-80b-a3b-thinking',   // Qwen3 Next 80B (thinking)
+  'gpt-4-32k':       'nvidia/llama-3.1-nemotron-ultra-253b-v1',
+  'gemini-pro':      'moonshotai/kimi-k2-thinking',         // Kimi K2 thinking mode
 
   // ── Coding / Dev ───────────────────────────────────────────────────────
-  'gpt-3.5-turbo':   'qwen/qwen3-coder-480b-a35b-instruct', // Qwen3 Coder 480B
+  'gpt-3.5-turbo':   'qwen/qwen3-coder-480b-a35b-instruct',
 
   // ── Balanced ───────────────────────────────────────────────────────────
-  'claude-3-opus':   'moonshotai/kimi-k2-instruct-0905',   // Kimi K2 Instruct
-  'claude-3-sonnet': 'deepseek-ai/deepseek-v3.1',          // DeepSeek V3.1
+  'claude-3-opus':   'moonshotai/kimi-k2-instruct-0905',
+  'claude-3-sonnet': 'deepseek-ai/deepseek-v3_1',          // V3.1 (underscore!)
 
   // ── Fast / Light ───────────────────────────────────────────────────────
-  'claude-3-haiku':  'openai/gpt-oss-20b',                 // GPT-OSS 20B (fast)
-  'claude-instant':  'meta/llama-3.1-8b-instruct',         // Llama 3.1 8B (fastest)
+  'claude-3-haiku':  'openai/gpt-oss-20b',
+  'claude-instant':  'meta/llama-3.1-8b-instruct',
 };
 
 // ─── MIDDLEWARE: AUTH ──────────────────────────────────────────────────────
