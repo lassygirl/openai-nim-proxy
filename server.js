@@ -33,7 +33,7 @@ const ENABLE_THINKING_MODE = false;
 const MODEL_MAPPING = {
   // ── Latest / Flagship ──────────────────────────────────────────────────
   'gpt-4o':          'deepseek-ai/deepseek-v3_2',          // DeepSeek V3.2 685B
-  'gpt-4-turbo':     'moonshotai/kimi-k2-5',               // Kimi K2.5 multimodal
+  'gpt-4-turbo':     'moonshotai/kimi-k2.5',               // Kimi K2.5 multimodal
   'gpt-4':           'z-ai/glm5',                          // GLM-5 744B
 
   // ── Strong Reasoning ───────────────────────────────────────────────────
