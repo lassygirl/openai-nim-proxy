@@ -21,7 +21,7 @@ const NIM_API_KEY  = process.env.NIM_API_KEY;
 const PROXY_API_KEY = process.env.PROXY_API_KEY || null;
 
 // 🔥 REASONING DISPLAY TOGGLE — set true to show <think> reasoning blocks
-const SHOW_REASONING = false;
+const SHOW_REASONING = true;
 
 // 🔥 THINKING MODE TOGGLE — set true for models that support thinking parameter
 const ENABLE_THINKING_MODE = false;
