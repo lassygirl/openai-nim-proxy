@@ -226,6 +226,30 @@ app.post('/v1/chat/completions', async (req, res) => {
   }
 });
 
+// Alias routes — handle Janitor AI calling without /v1 prefix
+app.post('/chat/completions', (req, res, next) => {
+  req.url = '/v1/chat/completions';
+  app.handle(req, res, next);
+});
+
+app.get('/models', (req, res, next) => {
+  req.url = '/v1/models';
+  app.handle(req, res, next);
+});
+
+// Root — show friendly info instead of 404
+app.get('/', (req, res) => {
+  res.json({
+    service: 'OpenAI to NVIDIA NIM Proxy',
+    status: 'running',
+    endpoints: {
+      health:      '/health',
+      models:      '/v1/models',
+      completions: '/v1/chat/completions'
+    }
+  });
+});
+
 // 404 catch-all
 app.all('*', (req, res) => {
   res.status(404).json({ error: { message: `Endpoint ${req.path} not found`, type: 'invalid_request_error', code: 404 } });
