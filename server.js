@@ -261,7 +261,7 @@ app.post('/v1/chat/completions', async (req, res) => {
     if (kept.length > 50) trimmedMessages.splice(protectedMsgs.length, kept.length - 50);
 
     // Trim until actual JSON payload sent to NIM is under 480KB
-    const MAX_BYTES = 480 * 1024;
+    const MAX_BYTES = 300 * 1024;
     while (trimmedMessages.length > protectedMsgs.length + 2) {
       const size = Buffer.byteLength(JSON.stringify(trimmedMessages), 'utf8');
       if (size <= MAX_BYTES) break;
