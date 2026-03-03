@@ -110,6 +110,38 @@ app.post('/v1/chat/completions', async (req, res) => {
   try {
     const { model, messages, temperature, max_tokens, stream } = req.body;
 
+    const estimateTokens = (msgs) =>
+      msgs.reduce((sum, m) => sum + Math.ceil((m.content?.length || 0) / 4), 0);
+
+    const MODEL_CONTEXT = {
+      'z-ai/glm5': 120000, 'z-ai/glm4.7': 32000,
+      'deepseek-ai/deepseek-v3.2': 128000, 'deepseek-ai/deepseek-v3_1': 64000,
+      'moonshotai/kimi-k2.5': 128000, 'moonshotai/kimi-k2-instruct-0905': 128000,
+      'nvidia/llama-3.1-nemotron-ultra-253b-v1': 32000,
+      'qwen/qwen3-coder-480b-a35b-instruct': 32000,
+      'openai/gpt-oss-20b': 32000, 'meta/llama-3.1-8b-instruct': 32000,
+    };
+
+    const nimModel = MODEL_MAPPING[model] || 'meta/llama-3.1-8b-instruct';
+    const tokenBudget = (MODEL_CONTEXT[nimModel] || 32000) - (max_tokens || 9024);
+
+    const protectedMsgs = [], chatHistory = [];
+    let firstAssistantSeen = false;
+    for (const msg of messages) {
+      if (msg.role === 'system') { protectedMsgs.push(msg); }
+      else if (msg.role === 'assistant' && !firstAssistantSeen) { protectedMsgs.push(msg); firstAssistantSeen = true; }
+      else { chatHistory.push(msg); }
+    }
+
+    const kept = [];
+    let budget = tokenBudget - estimateTokens(protectedMsgs);
+    for (let i = chatHistory.length - 1; i >= 0; i--) {
+      const t = estimateTokens([chatHistory[i]]);
+      if (budget - t < 0) break;
+      kept.unshift(chatHistory[i]); budget -= t;
+    }
+    const trimmedMessages = [...protectedMsgs, ...kept];
+
     // Smart model resolution with fallback chain
     let nimModel = MODEL_MAPPING[model];
 
@@ -143,7 +175,7 @@ app.post('/v1/chat/completions', async (req, res) => {
     // Build NIM request
     const nimRequest = {
       model: nimModel,
-      messages,
+      messages: trimmedMessages,
       temperature: temperature ?? 0.6,
       max_tokens: max_tokens ?? 9024,
       stream: stream ?? false,
