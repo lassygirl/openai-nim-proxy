@@ -201,9 +201,14 @@ app.post('/v1/chat/completions', async (req, res) => {
     // Trims:    oldest regular chat exchanges only
 
     const estimateTokens = (msgs) =>
-
-      msgs.reduce((sum, m) => sum + Math.ceil((m.content?.length || 0) / 4), 0);
-
+      msgs.reduce((sum, m) => {
+        const c = m.content;
+        if (!c) return sum;
+        if (typeof c === 'string') return sum + Math.ceil(c.length / 4);
+        if (Array.isArray(c)) return sum + c.reduce((s, part) =>
+          s + Math.ceil((part.text || part.content || JSON.stringify(part)).length / 4), 0);
+        return sum + Math.ceil(JSON.stringify(c).length / 4);
+      }, 0);
 
 
     const tokenBudget = (MODEL_CONTEXT[nimModel] || 32000) - (max_tokens || 9024);
@@ -253,6 +258,7 @@ app.post('/v1/chat/completions', async (req, res) => {
     }
 
     const trimmedMessages = [...protectedMsgs, ...kept];
+    if (kept.length > 50) trimmedMessages.splice(protectedMsgs.length, kept.length - 50);
 
 
 
