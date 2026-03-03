@@ -24,7 +24,7 @@ const PROXY_API_KEY = process.env.PROXY_API_KEY || null;
 const SHOW_REASONING = true;
 
 // 🔥 THINKING MODE TOGGLE — set true for models that support thinking parameter
-const ENABLE_THINKING_MODE = false;
+const ENABLE_THINKING_MODE = true;
 
 // ─── MODEL MAPPING ─────────────────────────────────────────────────────────
 // Maps OpenAI model names → NVIDIA NIM model IDs
