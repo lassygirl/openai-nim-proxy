@@ -294,12 +294,15 @@ app.post('/v1/chat/completions', async (req, res) => {
 
 
 
-    const response = await axios.post(`${NIM_API_BASE}/chat/completions`, nimRequest, {
+    const nimPayload = JSON.stringify(nimRequest);
+    const nimBytes = Buffer.byteLength(nimPayload, 'utf8');
+    console.log(`[SEND] Payload size: ${(nimBytes/1024).toFixed(1)}KB | Messages: ${trimmedMessages.length} | Model: ${nimModel}`);
 
+    const response = await axios.post(`${NIM_API_BASE}/chat/completions`, nimPayload, {
       headers: { Authorization: `Bearer ${NIM_API_KEY}`, 'Content-Type': 'application/json' },
-
+      maxBodyLength: Infinity,
+      maxContentLength: Infinity,
       responseType: stream ? 'stream' : 'json'
-
     });
 
 
