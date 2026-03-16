@@ -16,7 +16,7 @@ const NIM_API_BASE  = process.env.NIM_API_BASE || 'https://integrate.api.nvidia.
 const NIM_API_KEY   = process.env.NIM_API_KEY;
 const PROXY_API_KEY = process.env.PROXY_API_KEY || null;
 
-const SHOW_REASONING       = true; 
+const SHOW_REASONING       = true;
 const ENABLE_THINKING_MODE = true;
 
 // ─── MODEL MAPPING ─────────────────────────────────────────────────────────
@@ -49,6 +49,12 @@ const MODEL_CONTEXT = {
   'meta/llama-3.1-8b-instruct':                    32000,
 };
 
+// ─── SAFE JSON STRINGIFY ───────────────────────────────────────────────────
+// Prevents circular reference crashes when logging network errors
+function safeStringify(obj) {
+  try { return JSON.stringify(obj); } catch (_) { return '[circular or unstringifiable]'; }
+}
+
 // ─── AUTH MIDDLEWARE ───────────────────────────────────────────────────────
 function checkAuth(req, res, next) {
   if (req.path === '/health') return next();
@@ -70,6 +76,7 @@ app.get('/health', (req, res) => {
     status: 'ok',
     service: 'OpenAI to NVIDIA NIM Proxy',
     proxy_auth: PROXY_API_KEY ? 'enabled' : 'disabled ⚠️',
+    nim_key_set: !!NIM_API_KEY,
     reasoning_display: SHOW_REASONING,
     thinking_mode: ENABLE_THINKING_MODE,
     models: Object.keys(MODEL_MAPPING).length
@@ -87,6 +94,13 @@ app.post('/v1/chat/completions', async (req, res) => {
   try {
     const { model, messages, temperature, max_tokens, stream } = req.body;
 
+    // ── Validate request ───────────────────────────────────────────────────
+    if (!Array.isArray(messages) || messages.length === 0) {
+      return res.status(400).json({
+        error: { message: 'messages must be a non-empty array', type: 'invalid_request_error', code: 400 }
+      });
+    }
+
     // ── Resolve NIM model ──────────────────────────────────────────────────
     const nimModel = MODEL_MAPPING[model] || (() => {
       const m = model.toLowerCase();
@@ -97,7 +111,7 @@ app.post('/v1/chat/completions', async (req, res) => {
 
     // ── Strip <think> blocks from incoming history ─────────────────────────
     // SHOW_REASONING=true injects <think> blocks into responses which Janitor AI
-    // stores and sends back — stripping them here prevents payload from ballooning
+    // stores and sends back — stripping prevents payload from ballooning
     const stripThink = (content) => {
       if (typeof content === 'string')
         return content.replace(/<think>[\s\S]*?<\/think>\n*/g, '').trim();
@@ -158,16 +172,22 @@ app.post('/v1/chat/completions', async (req, res) => {
 
     const response = await axios.post(`${NIM_API_BASE}/chat/completions`, nimRequest, {
       headers: { Authorization: `Bearer ${NIM_API_KEY}`, 'Content-Type': 'application/json' },
-     maxBodyLength: Infinity,
+      maxBodyLength: Infinity,
       maxContentLength: Infinity,
       responseType: stream ? 'stream' : 'json',
-      timeout: 300000
+      timeout: 300000  // 5 min — covers connection + non-stream response
     });
 
     if (stream) {
       res.setHeader('Content-Type', 'text/event-stream');
       res.setHeader('Cache-Control', 'no-cache');
       res.setHeader('Connection', 'keep-alive');
+
+      // Stream-level timeout — if NVIDIA hangs mid-stream, end cleanly after 5 min
+      const streamTimeout = setTimeout(() => {
+        console.error('[STREAM] Timeout — NVIDIA hung mid-stream, ending response');
+        if (!res.writableEnded) res.end();
+      }, 300000);
 
       let buffer = '', thinkOpen = false;
 
@@ -202,8 +222,17 @@ app.post('/v1/chat/completions', async (req, res) => {
         }
       });
 
-      response.data.on('end', () => res.end());
-      response.data.on('error', err => { console.error('Stream error:', err); res.end(); });
+      response.data.on('end', () => {
+        clearTimeout(streamTimeout);
+        if (!res.writableEnded) res.end();
+      });
+
+      // Fixed: safe logging + guard against double-end
+      response.data.on('error', err => {
+        clearTimeout(streamTimeout);
+        console.error('Stream error:', err.message || safeStringify(err));
+        if (!res.writableEnded) res.end();
+      });
 
     } else {
       res.json({
@@ -223,9 +252,11 @@ app.post('/v1/chat/completions', async (req, res) => {
     }
 
   } catch (err) {
-   const nimError = err.response?.data;
+    const nimError = err.response?.data;
     console.error('Proxy error:', err.message);
-    try { console.error('NIM error:', JSON.stringify(nimError)); } catch (_) { console.error('NIM error: [circular]'); }
+    console.error('NIM error:', safeStringify(nimError));
+    // Guard: don't try to send error response if stream already started
+    if (res.headersSent) return;
     res.status(err.response?.status || 500).json({
       error: {
         message: nimError?.detail || nimError?.message || err.message || 'Internal server error',
@@ -252,6 +283,7 @@ app.all('*', (req, res) => {
 app.listen(PORT, () => {
   console.log(`\n🚀 OpenAI → NVIDIA NIM Proxy running on port ${PORT}`);
   console.log(`🔒 Proxy auth:       ${PROXY_API_KEY ? 'ENABLED' : 'DISABLED ⚠️'}`);
+  console.log(`🔑 NIM key:          ${NIM_API_KEY ? 'SET ✅' : 'MISSING ❌ — set NIM_API_KEY in Render!'}`);
   console.log(`💡 Reasoning:        ${SHOW_REASONING ? 'ENABLED' : 'DISABLED'}`);
   console.log(`🧠 Thinking mode:    ${ENABLE_THINKING_MODE ? 'ENABLED' : 'DISABLED'}`);
   console.log(`📋 Models mapped:    ${Object.keys(MODEL_MAPPING).length}\n`);
