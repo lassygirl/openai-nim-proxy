@@ -16,7 +16,7 @@ const NIM_API_BASE  = process.env.NIM_API_BASE || 'https://integrate.api.nvidia.
 const NIM_API_KEY   = process.env.NIM_API_KEY;
 const PROXY_API_KEY = process.env.PROXY_API_KEY || null;
 
-const SHOW_REASONING       = true;
+const SHOW_REASONING       = true; 
 const ENABLE_THINKING_MODE = true;
 
 // ─── MODEL MAPPING ─────────────────────────────────────────────────────────
@@ -158,9 +158,10 @@ app.post('/v1/chat/completions', async (req, res) => {
 
     const response = await axios.post(`${NIM_API_BASE}/chat/completions`, nimRequest, {
       headers: { Authorization: `Bearer ${NIM_API_KEY}`, 'Content-Type': 'application/json' },
-      maxBodyLength: Infinity,
+     maxBodyLength: Infinity,
       maxContentLength: Infinity,
-      responseType: stream ? 'stream' : 'json'
+      responseType: stream ? 'stream' : 'json',
+      timeout: 300000
     });
 
     if (stream) {
@@ -222,13 +223,12 @@ app.post('/v1/chat/completions', async (req, res) => {
     }
 
   } catch (err) {
-    const nimError = err.response?.data;
+   const nimError = err.response?.data;
     console.error('Proxy error:', err.message);
-    console.error('NIM error:', JSON.stringify(nimError));
+    try { console.error('NIM error:', JSON.stringify(nimError)); } catch (_) { console.error('NIM error: [circular]'); }
     res.status(err.response?.status || 500).json({
       error: {
         message: nimError?.detail || nimError?.message || err.message || 'Internal server error',
-        nim_response: nimError,
         type: 'invalid_request_error',
         code: err.response?.status || 500
       }
