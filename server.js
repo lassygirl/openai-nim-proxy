@@ -288,3 +288,6 @@ app.listen(PORT, () => {
   console.log(`🧠 Thinking mode:    ${ENABLE_THINKING_MODE ? 'ENABLED' : 'DISABLED'}`);
   console.log(`📋 Models mapped:    ${Object.keys(MODEL_MAPPING).length}\n`);
 });
+
+const { model, messages, temperature, max_tokens, stream } = req.body;
+console.log(`[REQ] model=${model} | max_tokens=${max_tokens} | stream=${stream}`); // ADD THIS
