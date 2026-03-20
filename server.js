@@ -16,8 +16,8 @@ const NIM_API_BASE  = process.env.NIM_API_BASE || 'https://integrate.api.nvidia.
 const NIM_API_KEY   = process.env.NIM_API_KEY;
 const PROXY_API_KEY = process.env.PROXY_API_KEY || null;
 
-const SHOW_REASONING       = false;
-const ENABLE_THINKING_MODE = false;
+const SHOW_REASONING       = true;
+const ENABLE_THINKING_MODE = true;
 
 // ─── MODEL MAPPING ─────────────────────────────────────────────────────────
 const MODEL_MAPPING = {
