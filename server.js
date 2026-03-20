@@ -94,6 +94,9 @@ app.post('/v1/chat/completions', async (req, res) => {
   try {
     const { model, messages, temperature, max_tokens, stream } = req.body;
 
+console.log(`[REQ] model=${model} | max_tokens=${max_tokens} | stream=${stream}`);
+
+
     // ── Validate request ───────────────────────────────────────────────────
     if (!Array.isArray(messages) || messages.length === 0) {
       return res.status(400).json({
@@ -289,5 +292,3 @@ app.listen(PORT, () => {
   console.log(`📋 Models mapped:    ${Object.keys(MODEL_MAPPING).length}\n`);
 });
 
-const { model, messages, temperature, max_tokens, stream } = req.body;
-console.log(`[REQ] model=${model} | max_tokens=${max_tokens} | stream=${stream}`); // ADD THIS
