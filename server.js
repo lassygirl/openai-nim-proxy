@@ -19,8 +19,8 @@ const PROXY_API_KEY = process.env.PROXY_API_KEY || null;
 const SHOW_REASONING       = true;
 const ENABLE_THINKING_MODE = true;
 
-// ─── MODEL MAPPING ─────────────────────────────────────────────────────────
 const MODEL_MAPPING = {
+  // ── EXISTING (unchanged) ─────────────────────────────────────────────────
   'gpt-4o':          'deepseek-ai/deepseek-v3.2',
   'gpt-4-turbo':     'moonshotai/kimi-k2.5',
   'gpt-4':           'z-ai/glm5',
@@ -32,14 +32,21 @@ const MODEL_MAPPING = {
   'claude-3-sonnet': 'deepseek-ai/deepseek-v3_1',
   'claude-3-haiku':  'openai/gpt-oss-20b',
   'claude-instant':  'meta/llama-3.1-8b-instruct',
+
+  // ── NEW ADDITIONS ────────────────────────────────────────────────────────
+  'gpt-4o-mini':          'deepseek-ai/deepseek-v3_1-terminus', // V3.1 Terminus — hybrid think/no-think
+  'gpt-4-0125-preview':   'minimax/minimax-m2.5',               // MiniMax M2.5 — 230B, top coding+logic
+  'gpt-4-1106-preview':   'qwen/qwen3-235b-a22b',               // Qwen3 235B MoE — best reasoning+coding
+  'gpt-3.5-turbo-16k':    'nvidia/nemotron-3-nano-30b-a3b',     // Nemotron Nano — 1M ctx, fast
+  'gpt-3.5-turbo-instruct': 'nvidia/nemotron-3-super-120b-a12b',// Nemotron Super — 1M ctx, reasoning
 };
 
-// ─── PER-MODEL CONTEXT LIMITS ──────────────────────────────────────────────
 const MODEL_CONTEXT = {
+  // ── EXISTING ─────────────────────────────────────────────────────────────
   'z-ai/glm5':                                    120000,
   'z-ai/glm4.7':                                   32000,
   'deepseek-ai/deepseek-v3.2':                    128000,
-  'deepseek-ai/deepseek-v3_1':                     64000,
+  'deepseek-ai/deepseek-v3_1':                    128000,
   'moonshotai/kimi-k2.5':                         128000,
   'moonshotai/kimi-k2-instruct-0905':             128000,
   'moonshotai/kimi-k2-thinking':                  128000,
@@ -47,6 +54,13 @@ const MODEL_CONTEXT = {
   'qwen/qwen3-coder-480b-a35b-instruct':           32000,
   'openai/gpt-oss-20b':                            32000,
   'meta/llama-3.1-8b-instruct':                    32000,
+
+  // ── NEW ───────────────────────────────────────────────────────────────────
+  'deepseek-ai/deepseek-v3_1-terminus':           128000,
+  'minimax/minimax-m2.5':                          32000,
+  'qwen/qwen3-235b-a22b':                          32000,
+  'nvidia/nemotron-3-nano-30b-a3b':              1000000,
+  'nvidia/nemotron-3-super-120b-a12b':           1000000,
 };
 
 // ─── SAFE JSON STRINGIFY ───────────────────────────────────────────────────
