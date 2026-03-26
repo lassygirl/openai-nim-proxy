@@ -269,7 +269,18 @@ console.log(`[REQ] model=${model} | max_tokens=${max_tokens} | stream=${stream}`
     }
 
   } catch (err) {
-    const nimError = err.response?.data;
+    let nimError = err.response?.data;
+    if (nimError && typeof nimError.pipe === 'function') {
+      nimError = await new Promise((resolve) => {
+        let raw = '';
+        nimError.on('data', chunk => raw += chunk.toString());
+        nimError.on('end', () => {
+          try { resolve(JSON.parse(raw)); }
+          catch { resolve(raw); }
+        });
+        nimError.on('error', () => resolve('[stream read error]'));
+      });
+    }
     console.error('Proxy error:', err.message);
     console.error('NIM error:', safeStringify(nimError));
     // Guard: don't try to send error response if stream already started
