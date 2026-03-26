@@ -178,14 +178,25 @@ console.log(`[REQ] model=${model} | max_tokens=${max_tokens} | stream=${stream}`
     console.log(`[CTX] ${nimModel} | kept ${trimmedMessages.length}/${messages.length} msgs | trimmed ${messages.length - trimmedMessages.length} oldest`);
 
     // ── Build and send NIM request ─────────────────────────────────────────
-    const nimRequest = {
-      model: nimModel,
-      messages: trimmedMessages,
-      temperature: temperature ?? 0.6,
-      max_tokens: max_tokens ?? 9024,
-      stream: stream ?? false,
-      ...(ENABLE_THINKING_MODE && { extra_body: { chat_template_kwargs: { thinking: true } } })
-    };
+   // Only these models support thinking mode via extra_body
+const THINKING_SUPPORTED = [
+  'z-ai/glm5',
+  'moonshotai/kimi-k2-thinking',
+  'deepseek-ai/deepseek-v3_1',
+  'deepseek-ai/deepseek-v3.2',
+  'deepseek-ai/deepseek-v3_1-terminus',
+];
+
+const nimRequest = {
+  model: nimModel,
+  messages: trimmedMessages,
+  temperature: temperature ?? 0.6,
+  max_tokens: max_tokens ?? 9024,
+  stream: stream ?? false,
+  ...(ENABLE_THINKING_MODE && THINKING_SUPPORTED.includes(nimModel) && { 
+    extra_body: { chat_template_kwargs: { thinking: true } } 
+  })
+};
 
     const response = await axios.post(`${NIM_API_BASE}/chat/completions`, nimRequest, {
       headers: { Authorization: `Bearer ${NIM_API_KEY}`, 'Content-Type': 'application/json' },
