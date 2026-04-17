@@ -34,7 +34,7 @@ const MODEL_MAPPING = {
   'claude-instant':  'meta/llama-3.1-8b-instruct',
 
   // ── NEW ADDITIONS ────────────────────────────────────────────────────────
-  'gpt-4o-mini':          'deepseek-ai/deepseek-v3_1-terminus', // V3.1 Terminus — hybrid think/no-think
+  'gpt-4o-mini':          'deepseek-ai/deepseek-v3.1-terminus', // V3.1 Terminus — hybrid think/no-think
   'gpt-4-0125-preview':   'minimax/minimax-m2.5',               // MiniMax M2.5 — 230B, top coding+logic
   'gpt-4-1106-preview':   'qwen/qwen3-235b-a22b',               // Qwen3 235B MoE — best reasoning+coding
   'gpt-3.5-turbo-16k':    'nvidia/nemotron-3-nano-30b-a3b',     // Nemotron Nano — 1M ctx, fast
