@@ -25,11 +25,11 @@ const MODEL_MAPPING = {
   'gpt-4-turbo':     'moonshotai/kimi-k2.5',
   'gpt-4':           'z-ai/glm-5.1',
   'gpt-4-32k':       'minimaxai/minimax-m2.7',
-  'gemini-pro':      'moonshotai/kimi-k2-thinking',
+  'gemini-pro':      'deepseek-ai/deepseek-v4-pro',
   'gpt-4-vision':    'z-ai/glm4.7',
   'gpt-3.5-turbo':   'qwen/qwen3-coder-480b-a35b-instruct',
-  'claude-3-opus':   'moonshotai/kimi-k2-instruct-0905',
-  'claude-3-sonnet': 'deepseek-ai/deepseek-v3_1',
+  'claude-3-opus':   'deepseek-ai/deepseek-v4-flash',
+  'claude-3-sonnet': 'deepseek-ai/deepseek-v3.1',
   'claude-3-haiku':  'openai/gpt-oss-20b',
   'claude-instant':  'meta/llama-3.1-8b-instruct',
 
@@ -46,7 +46,7 @@ const MODEL_CONTEXT = {
   'z-ai/glm5':                                    120000,
   'z-ai/glm4.7':                                   32000,
   'deepseek-ai/deepseek-v3.2':                    128000,
-  'deepseek-ai/deepseek-v3_1':                    128000,
+  'deepseek-ai/deepseek-v3.1':                    128000,
   'moonshotai/kimi-k2.5':                         128000,
   'moonshotai/kimi-k2-instruct-0905':             128000,
   'moonshotai/kimi-k2-thinking':                  128000,
@@ -56,7 +56,7 @@ const MODEL_CONTEXT = {
   'meta/llama-3.1-8b-instruct':                    32000,
 
   // ── NEW ───────────────────────────────────────────────────────────────────
-  'deepseek-ai/deepseek-v3_1-terminus':           128000,
+  'deepseek-ai/deepseek-v3.1-terminus':           128000,
   'minimax/minimax-m2.5':                          32000,
   'qwen/qwen3-235b-a22b':                          32000,
   'nvidia/nemotron-3-nano-30b-a3b':              1000000,
