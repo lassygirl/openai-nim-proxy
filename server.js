@@ -180,11 +180,11 @@ console.log(`[REQ] model=${model} | max_tokens=${max_tokens} | stream=${stream}`
     // ── Build and send NIM request ─────────────────────────────────────────
    // Only these models support thinking mode via extra_body
 const THINKING_SUPPORTED = [
-  'z-ai/glm5',
+  'z-ai/glm5.1',
   'moonshotai/kimi-k2-thinking',
   'deepseek-ai/deepseek-v3_1',
   'deepseek-ai/deepseek-v3.2',
-  'deepseek-ai/deepseek-v3_1-terminus',
+  'deepseek-ai/deepseek-v3.1-terminus',
 ];
 
 const nimRequest = {
