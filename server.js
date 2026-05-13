@@ -6,12 +6,12 @@ const axios = require('axios');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middleware â€” 200mb to handle large Janitor AI payloads with reasoning history
+// Middleware - 200mb to handle large Janitor AI payloads with reasoning history
 app.use(cors());
 app.use(express.json({ limit: '200mb' }));
 app.use(express.urlencoded({ limit: '200mb', extended: true }));
 
-// â”€â”€â”€ CONFIG â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// --- CONFIG ---
 const NIM_API_BASE  = process.env.NIM_API_BASE || 'https://integrate.api.nvidia.com/v1';
 const NIM_API_KEY   = process.env.NIM_API_KEY;
 const PROXY_API_KEY = process.env.PROXY_API_KEY || null;
@@ -19,84 +19,67 @@ const PROXY_API_KEY = process.env.PROXY_API_KEY || null;
 const SHOW_REASONING       = true;
 const ENABLE_THINKING_MODE = true;
 
-// â”€â”€â”€ TIMEOUT CONFIG â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// --- TIMEOUT CONFIG ---
 // Change this one value to adjust ALL timeouts across the proxy.
-// Examples: 5 min = 300000 | 8 min = 480000 | 10 min = 600000 | 15 min = 900000
+// 5 min = 300000 | 8 min = 480000 | 10 min = 600000 | 15 min = 900000
 const TIMEOUT_MS = 600000; // 10 minutes
 
-// â”€â”€â”€ MODEL MAPPING â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// --- MODEL MAPPING ---
 const MODEL_MAPPING = {
-  // â”€â”€ EXISTING â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  'gpt-4o':          'deepseek-ai/deepseek-v3.2',
-  'gpt-4-turbo':     'moonshotai/kimi-k2.5',
-  'gpt-4':           'z-ai/glm-5.1',
-  'gpt-4-32k':       'minimaxai/minimax-m2.7',
-  'gemini-pro':      'deepseek-ai/deepseek-v4-pro',
-  'gpt-4-vision':    'z-ai/glm4.7',
-  'gpt-3.5-turbo':   'qwen/qwen3-coder-480b-a35b-instruct',
-  'claude-3-opus':   'deepseek-ai/deepseek-v4-flash',
-  'claude-3-sonnet': 'deepseek-ai/deepseek-v3.1',
-  'claude-3-haiku':  'openai/gpt-oss-20b',
-  'claude-instant':  'meta/llama-3.1-8b-instruct',
-
-  // â”€â”€ NEW ADDITIONS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  'gpt-4o-mini':             'deepseek-ai/deepseek-v3.1-terminus', // V3.1 Terminus â€” hybrid think/no-think
-  'gpt-4-0125-preview':      'minimax/minimax-m2.5',               // MiniMax M2.5 â€” 230B, top coding+logic
-  'gpt-4-1106-preview':      'qwen/qwen3-235b-a22b',               // Qwen3 235B MoE â€” best reasoning+coding
-  'gpt-3.5-turbo-16k':       'nvidia/nemotron-3-nano-30b-a3b',     // Nemotron Nano â€” 1M ctx, fast
-  'gpt-3.5-turbo-instruct':  'nvidia/nemotron-3-super-120b-a12b',  // Nemotron Super â€” 1M ctx, reasoning
+  'gpt-4o':                'deepseek-ai/deepseek-v4-pro',         // DeepSeek V4 Pro - 1.6T params, 1M ctx, Think High/Max modes
+  'gpt-4-turbo':           'deepseek-ai/deepseek-v4-flash',        // DeepSeek V4 Flash - fast version, 1M ctx
+  'gpt-4':                 'z-ai/glm-5.1',                         // GLM-5.1 - 754B, 131K ctx, best open weights
+  'gpt-4-32k':             'minimaxai/minimax-m2.7',               // MiniMax M2.7 - 230B, coding + reasoning
+  'gpt-4-vision':          'z-ai/glm4.7',                          // GLM-4.7 - 32K ctx, your tested favourite
+  'gemini-pro':            'moonshotai/kimi-k2.6',                 // Kimi K2.6 - 1T params, 32B active, multimodal
+  'gpt-3.5-turbo':         'moonshotai/kimi-k2.5',                 // Kimi K2.5 - 128K ctx
+  'gpt-3.5-turbo-instruct':'moonshotai/kimi-k2-thinking',          // Kimi K2 Thinking - 256K ctx, reasoning traces
+  'claude-3-opus':         'deepseek-ai/deepseek-v3.2',            // DeepSeek V3.2 - 128K ctx, strong logic
+  'claude-3-sonnet':       'deepseek-ai/deepseek-v3.1',            // DeepSeek V3.1 - 128K ctx
+  'claude-3-haiku':        'qwen/qwen3-coder-480b-a35b-instruct',  // Qwen3 Coder 480B - best coding logic
+  'claude-instant':        'nvidia/nemotron-3-super-120b-a12b',    // Nemotron Super - 1M ctx, never forgets
+  'gpt-4o-mini':           'qwen/qwen3-235b-a22b',                 // Qwen3 235B MoE - strong reasoning
+  'gpt-4-1106-preview':    'deepseek-ai/deepseek-v3.1-terminus',   // V3.1 Terminus - hybrid think/no-think
 };
 
-// â”€â”€â”€ PER-MODEL CONTEXT LIMITS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// --- PER-MODEL CONTEXT LIMITS ---
 const MODEL_CONTEXT = {
-  // â”€â”€ EXISTING â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  'z-ai/glm5':                                    120000,
-  'z-ai/glm4.7':                                   32000,
-  'deepseek-ai/deepseek-v3.2':                    128000,
-  'deepseek-ai/deepseek-v3.1':                    128000,
-  'moonshotai/kimi-k2.5':                         128000,
-  'moonshotai/kimi-k2-instruct-0905':             128000,
-  'moonshotai/kimi-k2-thinking':                  128000,
-  'nvidia/llama-3.1-nemotron-ultra-253b-v1':       32000,
-  'qwen/qwen3-coder-480b-a35b-instruct':           32000,
-  'openai/gpt-oss-20b':                            32000,
-  'meta/llama-3.1-8b-instruct':                    32000,
-  'deepseek-ai/deepseek-v3.1-terminus':           128000,
-  'minimax/minimax-m2.5':                          32000,
-  'qwen/qwen3-235b-a22b':                          32000,
-  'nvidia/nemotron-3-nano-30b-a3b':             1000000,
-  'nvidia/nemotron-3-super-120b-a12b':          1000000,
-
-  // â”€â”€ NEW â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  'z-ai/glm-5.1':                                 131072,
-  'minimaxai/minimax-m2.7':                        32000,
   'deepseek-ai/deepseek-v4-pro':                1000000,
   'deepseek-ai/deepseek-v4-flash':              1000000,
+  'deepseek-ai/deepseek-v3.2':                  128000,
+  'deepseek-ai/deepseek-v3.1':                  128000,
+  'deepseek-ai/deepseek-v3.1-terminus':         128000,
+  'z-ai/glm-5.1':                               131072,
+  'z-ai/glm4.7':                                 32000,
+  'minimaxai/minimax-m2.7':                      32000,
+  'moonshotai/kimi-k2.6':                       131072,
+  'moonshotai/kimi-k2.5':                       128000,
+  'moonshotai/kimi-k2-thinking':                256000,
+  'qwen/qwen3-coder-480b-a35b-instruct':         32000,
+  'qwen/qwen3-235b-a22b':                        32000,
+  'nvidia/nemotron-3-super-120b-a12b':         1000000,
 };
 
-// â”€â”€â”€ THINKING MODE SUPPORT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// --- THINKING MODE SUPPORT ---
 // Only models listed here receive the extra_body thinking parameter.
 // Sending it to unsupported models causes instant 400 errors.
 const THINKING_SUPPORTED = [
-  'z-ai/glm5',
   'z-ai/glm-5.1',
   'moonshotai/kimi-k2-thinking',
-  'deepseek-ai/deepseek-v3_1',
   'deepseek-ai/deepseek-v3.1',
   'deepseek-ai/deepseek-v3.2',
-  'deepseek-ai/deepseek-v3_1-terminus',
   'deepseek-ai/deepseek-v3.1-terminus',
   'deepseek-ai/deepseek-v4-pro',
   'deepseek-ai/deepseek-v4-flash',
 ];
 
-// â”€â”€â”€ SAFE JSON STRINGIFY â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// --- SAFE JSON STRINGIFY ---
 // Prevents circular reference crashes when logging network errors
 function safeStringify(obj) {
   try { return JSON.stringify(obj); } catch (_) { return '[circular or unstringifiable]'; }
 }
 
-// â”€â”€â”€ AUTH MIDDLEWARE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// --- AUTH MIDDLEWARE ---
 function checkAuth(req, res, next) {
   if (req.path === '/health') return next();
   if (!PROXY_API_KEY) return next();
@@ -111,16 +94,16 @@ function checkAuth(req, res, next) {
 }
 app.use(checkAuth);
 
-// â”€â”€â”€ ROUTES â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// --- ROUTES ---
 app.get('/health', (req, res) => {
   res.json({
     status: 'ok',
     service: 'OpenAI to NVIDIA NIM Proxy',
-    proxy_auth: PROXY_API_KEY ? 'enabled' : 'disabled âš ï¸',
+    proxy_auth: PROXY_API_KEY ? 'enabled' : 'disabled',
     nim_key_set: !!NIM_API_KEY,
     reasoning_display: SHOW_REASONING,
     thinking_mode: ENABLE_THINKING_MODE,
-    timeout_ms: TIMEOUT_MS,
+    timeout_minutes: TIMEOUT_MS / 60000,
     models: Object.keys(MODEL_MAPPING).length
   });
 });
@@ -138,24 +121,24 @@ app.post('/v1/chat/completions', async (req, res) => {
 
     console.log(`[REQ] model=${model} | max_tokens=${max_tokens} | stream=${stream}`);
 
-    // â”€â”€ Validate request â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // Validate request
     if (!Array.isArray(messages) || messages.length === 0) {
       return res.status(400).json({
         error: { message: 'messages must be a non-empty array', type: 'invalid_request_error', code: 400 }
       });
     }
 
-    // â”€â”€ Resolve NIM model â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // Resolve NIM model
     const nimModel = MODEL_MAPPING[model] || (() => {
       const m = model.toLowerCase();
-      if (m.includes('gpt-4') || m.includes('opus') || m.includes('405b')) return 'deepseek-ai/deepseek-v3.2';
+      if (m.includes('gpt-4') || m.includes('opus') || m.includes('405b')) return 'deepseek-ai/deepseek-v4-pro';
       if (m.includes('claude') || m.includes('gemini') || m.includes('70b')) return 'z-ai/glm-5.1';
-      return 'meta/llama-3.1-8b-instruct';
+      return 'nvidia/nemotron-3-super-120b-a12b';
     })();
 
-    // â”€â”€ Strip <think> blocks from incoming history â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // Strip <think> blocks from incoming history
     // SHOW_REASONING=true injects <think> blocks into responses which Janitor AI
-    // stores and sends back â€” stripping prevents payload from ballooning
+    // stores and sends back - stripping prevents payload from ballooning
     const stripThink = (content) => {
       if (typeof content === 'string')
         return content.replace(/<think>[\s\S]*?<\/think>\n*/g, '').trim();
@@ -163,7 +146,7 @@ app.post('/v1/chat/completions', async (req, res) => {
     };
     const cleanMessages = messages.map(m => ({ ...m, content: stripThink(m.content) }));
 
-    // â”€â”€ Token-aware trimming â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // Token-aware trimming
     // Protects: ALL system messages (prompt, character card, memory summaries)
     //         + first assistant message (character intro/persona)
     // Trims:    oldest regular chat exchanges only
@@ -204,7 +187,7 @@ app.post('/v1/chat/completions', async (req, res) => {
 
     console.log(`[CTX] ${nimModel} | kept ${trimmedMessages.length}/${messages.length} msgs | trimmed ${messages.length - trimmedMessages.length} oldest`);
 
-    // â”€â”€ Build and send NIM request â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // Build and send NIM request
     const nimRequest = {
       model: nimModel,
       messages: trimmedMessages,
@@ -229,9 +212,9 @@ app.post('/v1/chat/completions', async (req, res) => {
       res.setHeader('Cache-Control', 'no-cache');
       res.setHeader('Connection', 'keep-alive');
 
-      // Stream-level timeout â€” if NVIDIA hangs mid-stream, ends cleanly
+      // Stream-level timeout - if NVIDIA hangs mid-stream, ends cleanly
       const streamTimeout = setTimeout(() => {
-        console.error(`[STREAM] Timeout after ${TIMEOUT_MS / 60000} min â€” NVIDIA hung mid-stream, ending response`);
+        console.error(`[STREAM] Timeout after ${TIMEOUT_MS / 60000} min - NVIDIA hung mid-stream, ending response`);
         if (!res.writableEnded) res.end();
       }, TIMEOUT_MS);
 
@@ -311,7 +294,6 @@ app.post('/v1/chat/completions', async (req, res) => {
     }
     console.error('Proxy error:', err.message);
     console.error('NIM error:', safeStringify(nimError));
-    // Guard: don't try to send error response if stream already started
     if (res.headersSent) return;
     res.status(err.response?.status || 500).json({
       error: {
@@ -337,11 +319,11 @@ app.all('*', (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`\nðŸš€ OpenAI â†’ NVIDIA NIM Proxy running on port ${PORT}`);
-  console.log(`ðŸ”’ Proxy auth:       ${PROXY_API_KEY ? 'ENABLED' : 'DISABLED âš ï¸'}`);
-  console.log(`ðŸ”‘ NIM key:          ${NIM_API_KEY ? 'SET âœ…' : 'MISSING âŒ â€” set NIM_API_KEY in Render!'}`);
-  console.log(`ðŸ’¡ Reasoning:        ${SHOW_REASONING ? 'ENABLED' : 'DISABLED'}`);
-  console.log(`ðŸ§  Thinking mode:    ${ENABLE_THINKING_MODE ? 'ENABLED' : 'DISABLED'}`);
-  console.log(`â±ï¸  Timeout:          ${TIMEOUT_MS / 60000} minutes`);
-  console.log(`ðŸ“‹ Models mapped:    ${Object.keys(MODEL_MAPPING).length}\n`);
+  console.log('\nOpenAI -> NVIDIA NIM Proxy running on port ' + PORT);
+  console.log('Proxy auth:      ' + (PROXY_API_KEY ? 'ENABLED' : 'DISABLED'));
+  console.log('NIM key:         ' + (NIM_API_KEY ? 'SET' : 'MISSING - set NIM_API_KEY in Render!'));
+  console.log('Reasoning:       ' + (SHOW_REASONING ? 'ENABLED' : 'DISABLED'));
+  console.log('Thinking mode:   ' + (ENABLE_THINKING_MODE ? 'ENABLED' : 'DISABLED'));
+  console.log('Timeout:         ' + (TIMEOUT_MS / 60000) + ' minutes');
+  console.log('Models mapped:   ' + Object.keys(MODEL_MAPPING).length + '\n');
 });
