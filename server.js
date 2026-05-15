@@ -35,11 +35,12 @@ const MODEL_MAPPING = {
   'gpt-3.5-turbo':         'moonshotai/kimi-k2.5',                 // Kimi K2.5 - 128K ctx
   'gpt-3.5-turbo-instruct':'moonshotai/kimi-k2-thinking',          // Kimi K2 Thinking - 256K ctx, reasoning traces
   'claude-3-opus':         'deepseek-ai/deepseek-v3.2',            // DeepSeek V3.2 - 128K ctx, strong logic
-  'claude-3-sonnet':       'deepseek-ai/deepseek-v3.1',            // DeepSeek V3.1 - 128K ctx
+  'claude-3-sonnet':       'google/gemma-4-31b-it',            // DeepSeek V3.1 - 128K ctx
   'claude-3-haiku':        'qwen/qwen3-coder-480b-a35b-instruct',  // Qwen3 Coder 480B - best coding logic
   'claude-instant':        'nvidia/nemotron-3-super-120b-a12b',    // Nemotron Super - 1M ctx, never forgets
   'gpt-4o-mini':           'qwen/qwen3-235b-a22b',                 // Qwen3 235B MoE - strong reasoning
   'gpt-4-1106-preview':    'deepseek-ai/deepseek-v3.1-terminus',   // V3.1 Terminus - hybrid think/no-think
+  
 };
 
 // --- PER-MODEL CONTEXT LIMITS ---
