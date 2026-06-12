@@ -65,7 +65,6 @@ const MODEL_CONTEXT = {
 // Only models listed here receive the extra_body thinking parameter.
 // Sending it to unsupported models causes instant 400 errors.
 const THINKING_SUPPORTED = [
-  'z-ai/glm-5.1',
   'moonshotai/kimi-k2-thinking',
   'deepseek-ai/deepseek-v3.1',
   'deepseek-ai/deepseek-v3.2',
