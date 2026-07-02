@@ -64,17 +64,51 @@ const MODEL_CONTEXT = {
 // --- THINKING MODE SUPPORT ---
 // Only models listed here receive the extra_body thinking parameter.
 // Sending it to unsupported models causes instant 400 errors.
-const THINKING_SUPPORTED = [
+// --- THINKING PARAM MAP (per model family, root-level chat_template_kwargs) ---
+const THINKING_PARAM_BUILDERS = {
+  // DeepSeek V3.x + V4 — same key, just "thinking"
+  deepseek: (model) => ({ thinking: true }),
+  // Nemotron — different key name
+  nemotron: (model) => ({ enable_thinking: true }),
+  // MiniMax — different key AND different value type
+  minimax: (model) => ({ thinking_mode: 'enabled' }),
+};
+
+function getModelFamily(nimModel) {
+  if (nimModel.startsWith('deepseek-ai/')) return 'deepseek';
+  if (nimModel.startsWith('nvidia/nemotron')) return 'nemotron';
+  if (nimModel.startsWith('minimaxai/')) return 'minimax';
+  return null; // GLM, Qwen, Kimi handled elsewhere / think by default / not enabled yet
+}
+
+// Models to actually enable thinking on (GLM excluded - thinks by default already)
+const THINKING_ENABLED_MODELS = [
   'moonshotai/kimi-k2-thinking',
   'deepseek-ai/deepseek-v3.1',
   'deepseek-ai/deepseek-v3.2',
   'deepseek-ai/deepseek-v3.1-terminus',
-];
-
-const DEEPSEEK_V4_MODELS = [
   'deepseek-ai/deepseek-v4-pro',
   'deepseek-ai/deepseek-v4-flash',
+  'nvidia/nemotron-3-super-120b-a12b',
+  'minimaxai/minimax-m3',
 ];
+
+// --- Build NIM request ---
+const nimRequest = {
+  model: nimModel,
+  messages: trimmedMessages,
+  temperature: temperature ?? 0.6,
+  max_tokens: max_tokens ?? 9024,
+  stream: stream ?? false,
+};
+
+if (ENABLE_THINKING_MODE && THINKING_ENABLED_MODELS.includes(nimModel)) {
+  const family = getModelFamily(nimModel);
+  if (family && THINKING_PARAM_BUILDERS[family]) {
+    // chat_template_kwargs goes at ROOT level - NOT wrapped in "extra_body"
+    nimRequest.chat_template_kwargs = THINKING_PARAM_BUILDERS[family](nimModel);
+  }
+}
 
 // --- SAFE JSON STRINGIFY ---
 // Prevents circular reference crashes when logging network errors
@@ -191,20 +225,7 @@ app.post('/v1/chat/completions', async (req, res) => {
     console.log(`[CTX] ${nimModel} | kept ${trimmedMessages.length}/${messages.length} msgs | trimmed ${messages.length - trimmedMessages.length} oldest`);
 
     // Build and send NIM request
-    const nimRequest = {
-  model: nimModel,
-  messages: trimmedMessages,
-  temperature: temperature ?? 0.6,
-  max_tokens: max_tokens ?? 9024,
-  stream: stream ?? false,
-  ...(ENABLE_THINKING_MODE && THINKING_SUPPORTED.includes(nimModel) && {
-    extra_body: { chat_template_kwargs: { thinking: true } }
-  }),
-  ...(ENABLE_THINKING_MODE && DEEPSEEK_V4_MODELS.includes(nimModel) && {
-    extra_body: { chat_template_kwargs: { thinking: true, reasoning_effort: "high" } }
-  })
-};
-
+    
     const response = await axios.post(`${NIM_API_BASE}/chat/completions`, nimRequest, {
       headers: { Authorization: `Bearer ${NIM_API_KEY}`, 'Content-Type': 'application/json' },
       maxBodyLength: Infinity,
