@@ -30,7 +30,7 @@ const MODEL_MAPPING = {
   'gpt-4-turbo':           'deepseek-ai/deepseek-v4-flash',        // DeepSeek V4 Flash - fast version, 1M ctx
   'gpt-4':                 'z-ai/glm-5.1',                         // GLM-5.1 - 754B, 131K ctx, best open weights
   'gpt-4-32k':             'minimaxai/minimax-m2.7',               // MiniMax M2.7 - 230B, coding + reasoning
-  'gpt-4-vision':          'z-ai/glm4.7',                          // GLM-4.7 - 32K ctx, your tested favourite
+  'gpt-4-vision':          'minimaxai/minimax-m3',                          // GLM-4.7 - 32K ctx, your tested favourite
   'gemini-pro':            'moonshotai/kimi-k2.6',                 // Kimi K2.6 - 1T params, 32B active, multimodal
   'gpt-3.5-turbo':         'moonshotai/kimi-k2.5',                 // Kimi K2.5 - 128K ctx
   'gpt-3.5-turbo-instruct':'moonshotai/kimi-k2-thinking',          // Kimi K2 Thinking - 256K ctx, reasoning traces
@@ -69,6 +69,9 @@ const THINKING_SUPPORTED = [
   'deepseek-ai/deepseek-v3.1',
   'deepseek-ai/deepseek-v3.2',
   'deepseek-ai/deepseek-v3.1-terminus',
+];
+
+const DEEPSEEK_V4_MODELS = [
   'deepseek-ai/deepseek-v4-pro',
   'deepseek-ai/deepseek-v4-flash',
 ];
@@ -189,15 +192,18 @@ app.post('/v1/chat/completions', async (req, res) => {
 
     // Build and send NIM request
     const nimRequest = {
-      model: nimModel,
-      messages: trimmedMessages,
-      temperature: temperature ?? 0.6,
-      max_tokens: max_tokens ?? 9024,
-      stream: stream ?? false,
-      ...(ENABLE_THINKING_MODE && THINKING_SUPPORTED.includes(nimModel) && {
-        extra_body: { chat_template_kwargs: { thinking: true } }
-      })
-    };
+  model: nimModel,
+  messages: trimmedMessages,
+  temperature: temperature ?? 0.6,
+  max_tokens: max_tokens ?? 9024,
+  stream: stream ?? false,
+  ...(ENABLE_THINKING_MODE && THINKING_SUPPORTED.includes(nimModel) && {
+    extra_body: { chat_template_kwargs: { thinking: true } }
+  }),
+  ...(ENABLE_THINKING_MODE && DEEPSEEK_V4_MODELS.includes(nimModel) && {
+    extra_body: { chat_template_kwargs: { thinking: true, reasoning_effort: "high" } }
+  })
+};
 
     const response = await axios.post(`${NIM_API_BASE}/chat/completions`, nimRequest, {
       headers: { Authorization: `Bearer ${NIM_API_KEY}`, 'Content-Type': 'application/json' },
