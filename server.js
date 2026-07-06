@@ -28,12 +28,7 @@ const TIMEOUT_MS = 600000; // 10 minutes
 const MODEL_MAPPING = {
   'gpt-4o':                'deepseek-ai/deepseek-v4-pro',         // DeepSeek V4 Pro - 1.6T params, 1M ctx, Think High/Max modes
   'gpt-4-turbo':           'deepseek-ai/deepseek-v4-flash',        // DeepSeek V4 Flash - fast version, 1M ctx
-  'gpt-4':                 'z-ai/glm-5.2',                         // GLM-5.2 - 744B, 1M ctx. NOTE: not yet confirmed live on
-                                                                     // NIM free API as of July 2, 2026 (GLM-5.1 just deprecated
-                                                                     // today). Test with a simple curl before relying on this in
-                                                                     // production - if it 404/400s, temporarily point 'gpt-4' at
-                                                                     // 'nvidia/nemotron-3-super-120b-a12b' or
-                                                                     // 'minimaxai/minimax-m2.7' until NVIDIA activates it.
+  'gpt-4':                 'z-ai/glm-5.2',                                                                                                             
   'gpt-4-32k':             'minimaxai/minimax-m2.7',               // MiniMax M2.7 - 230B, coding + reasoning, confirmed working
   'gpt-4-vision':          'minimaxai/minimax-m3',                 // MiniMax M3 - multimodal, 1M ctx
   'gemini-pro':            'moonshotai/kimi-k2.6',                 // Kimi K2.6 - 1T params, 32B active, multimodal
