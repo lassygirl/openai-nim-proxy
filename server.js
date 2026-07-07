@@ -67,15 +67,10 @@ const THINKING_PARAM_BUILDERS = {
   deepseek: () => ({ thinking: true }),
   nemotron: () => ({ enable_thinking: true }),
   minimax:  () => ({ thinking_mode: 'enabled' }),
-  
-  // GLM 5.2 on NIM: Requires parameters to be nested inside chat_template_kwargs
-  // at the root of the JSON payload to successfully trigger and return reasoning_content.
   glm: () => ({ 
-    chat_template_kwargs: { 
       enable_thinking: true, 
       clear_thinking: false 
-    } 
-  }),
+    }),
 };
 
 function getModelFamily(nimModel) {
