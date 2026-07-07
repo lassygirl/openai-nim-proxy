@@ -26,27 +26,25 @@ const TIMEOUT_MS = 600000; // 10 minutes
 
 // --- MODEL MAPPING ---
 const MODEL_MAPPING = {
-  'gpt-4o':                'deepseek-ai/deepseek-v4-pro',         // DeepSeek V4 Pro - 1.6T params, 1M ctx, Think High/Max modes
+  'gpt-4o':                'deepseek-ai/deepseek-v4-pro',         // DeepSeek V4 Pro - 1.6T params, 1M ctx
   'gpt-4-turbo':           'deepseek-ai/deepseek-v4-flash',        // DeepSeek V4 Flash - fast version, 1M ctx
-  'gpt-4':                 'z-ai/glm-5.2',                                                                                                             
-  'gpt-4-32k':             'minimaxai/minimax-m2.7',               // MiniMax M2.7 - 230B, coding + reasoning, confirmed working
+  'gpt-4':                 'z-ai/glm-5.2',                         // GLM-5.2 - 753B, 1M ctx. Thinks by default at MAX
+                                                                     // effort - no parameter needed. DEGRADED errors are
+                                                                     // a known NIM infra issue, not a code problem; wait it out.
+  'gpt-4-32k':             'minimaxai/minimax-m2.7',               // MiniMax M2.7 - 230B, coding + reasoning
   'gpt-4-vision':          'minimaxai/minimax-m3',                 // MiniMax M3 - multimodal, 1M ctx
   'gemini-pro':            'moonshotai/kimi-k2.6',                 // Kimi K2.6 - 1T params, 32B active, multimodal
   'gpt-3.5-turbo':         'moonshotai/kimi-k2.5',                 // Kimi K2.5 - 128K ctx
   'gpt-3.5-turbo-instruct':'moonshotai/kimi-k2-thinking',          // Kimi K2 Thinking - 256K ctx, reasoning traces
-  'claude-3-opus':         'deepseek-ai/deepseek-v3.2',            // DeepSeek V3.2 - 128K ctx, strong logic
-  'claude-3-sonnet':       'google/gemma-4-31b-it',                // Gemma 4 31B - 256K ctx (intentional user choice, kept as-is)
-  'claude-3-haiku':        'qwen/qwen3-coder-480b-a35b-instruct',  // Qwen3 Coder 480B - best coding logic
+  'claude-3-opus':         'deepseek-ai/deepseek-v3.2',            // DeepSeek V3.2 - 128K ctx
+  'claude-3-sonnet':       'google/gemma-4-31b-it',                // Gemma 4 31B - 256K ctx
+  'claude-3-haiku':        'qwen/qwen3-coder-480b-a35b-instruct',  // Qwen3 Coder 480B
   'claude-instant':        'nvidia/nemotron-3-super-120b-a12b',    // Nemotron Super - 1M ctx, never forgets
-  'gpt-4o-mini':           'qwen/qwen3-235b-a22b',                 // Qwen3 235B MoE - strong reasoning
-  'gpt-4-1106-preview':    'deepseek-ai/deepseek-v3.1',            // V3.1 - swapped off v3.1-terminus (Downloadable-only, not
-                                                                     // API accessible on free NIM tier)
+  'gpt-4o-mini':           'qwen/qwen3-235b-a22b',                 // Qwen3 235B MoE
+  'gpt-4-1106-preview':    'deepseek-ai/deepseek-v3.1',            // DeepSeek V3.1 - 128K ctx
 };
 
 // --- PER-MODEL CONTEXT LIMITS ---
-// Removed: z-ai/glm-5.1 (deprecated), z-ai/glm4.7 (no longer mapped to any
-// key - dead entry), deepseek-ai/deepseek-v3.1-terminus (Downloadable-only,
-// not reachable via free API).
 const MODEL_CONTEXT = {
   'deepseek-ai/deepseek-v4-pro':                1000000,
   'deepseek-ai/deepseek-v4-flash':              1000000,
@@ -64,36 +62,28 @@ const MODEL_CONTEXT = {
   'google/gemma-4-31b-it':                       256000,
 };
 
-// --- THINKING MODE SUPPORT ---
-// NIM has no universal "thinking" flag. Each model family uses a different
-// key inside chat_template_kwargs, and chat_template_kwargs itself must sit
-// at the ROOT of the request body - NOT wrapped in a field called
-// "extra_body". "extra_body" is an OpenAI-SDK-only construct that gets
-// flattened into the root by the SDK; when building raw JSON by hand (as
-// this proxy does via axios), sending a literal "extra_body" key means NIM
-// receives a field it doesn't recognize. Some endpoints silently ignore it;
-// stricter ones (like deepseek-v4-pro) 400 on it.
+// --- THINKING ---
 const THINKING_PARAM_BUILDERS = {
-  deepseek: () => ({ thinking: true }),          // DeepSeek V3.x + V4 - same key
-  nemotron: () => ({ enable_thinking: true }),   // Nemotron - different key name
-  minimax:  () => ({ thinking_mode: 'enabled' }), // MiniMax - different key + string value
-  // GLM intentionally has no builder: GLM thinks internally on NIM by
-  // default, but NIM does not expose reasoning_content for GLM at all right
-  // now, for any parameter combination. This is a platform-side limitation,
-  // not something fixable from the request payload.
-  // Gemma 4 intentionally has no builder: its thinking control is a special
-  // <|think|> token prepended to the system prompt, not a request
-  // parameter, so it can't be handled through chat_template_kwargs.
+  deepseek: () => ({ thinking: true }),
+  nemotron: () => ({ enable_thinking: true }),
+  minimax:  () => ({ thinking_mode: 'enabled' }),
+  // GLM on NIM: model thinks internally by default but strips reasoning from
+  // the response unless clear_thinking is explicitly false.
+  // Confirmed working for GLM-5 and GLM-4.7 on NIM via empirical testing.
+  // GLM-5.2 uses this same pattern (unconfirmed - model launched today,
+  // still DEGRADED). If thinking doesn't appear once stable, try
+  // { reasoning_effort: 'max' } instead.
+  glm: () => ({ enable_thinking: true, clear_thinking: false }),
 };
 
 function getModelFamily(nimModel) {
+  if (nimModel === 'z-ai/glm-5.2') return 'glm';
   if (nimModel.startsWith('deepseek-ai/')) return 'deepseek';
   if (nimModel.startsWith('nvidia/nemotron')) return 'nemotron';
   if (nimModel.startsWith('minimaxai/')) return 'minimax';
   return null;
 }
 
-// Models to actually request thinking on. GLM and Gemma excluded - see notes above.
 const THINKING_ENABLED_MODELS = [
   'moonshotai/kimi-k2-thinking',
   'deepseek-ai/deepseek-v3.1',
@@ -102,6 +92,7 @@ const THINKING_ENABLED_MODELS = [
   'deepseek-ai/deepseek-v4-flash',
   'nvidia/nemotron-3-super-120b-a12b',
   'minimaxai/minimax-m3',
+  'z-ai/glm-5.2',  // added
 ];
 
 // --- SAFE JSON STRINGIFY ---
@@ -152,7 +143,6 @@ app.post('/v1/chat/completions', async (req, res) => {
 
     console.log(`[REQ] model=${model} | max_tokens=${max_tokens} | stream=${stream}`);
 
-    // Validate request
     if (!Array.isArray(messages) || messages.length === 0) {
       return res.status(400).json({
         error: { message: 'messages must be a non-empty array', type: 'invalid_request_error', code: 400 }
@@ -167,9 +157,9 @@ app.post('/v1/chat/completions', async (req, res) => {
       return 'nvidia/nemotron-3-super-120b-a12b';
     })();
 
-    // Strip <think> blocks from incoming history
-    // SHOW_REASONING=true injects <think> blocks into responses which Janitor AI
-    // stores and sends back - stripping prevents payload from ballooning
+    // Strip <think> blocks from incoming history.
+    // SHOW_REASONING injects <think> blocks into responses; Janitor AI stores
+    // and resends them. Stripping keeps payloads from growing every turn.
     const stripThink = (content) => {
       if (typeof content === 'string')
         return content.replace(/<think>[\s\S]*?<\/think>\n*/g, '').trim();
@@ -177,10 +167,9 @@ app.post('/v1/chat/completions', async (req, res) => {
     };
     const cleanMessages = messages.map(m => ({ ...m, content: stripThink(m.content) }));
 
-    // Token-aware trimming
-    // Protects: ALL system messages (prompt, character card, memory summaries)
-    //         + first assistant message (character intro/persona)
-    // Trims:    oldest regular chat exchanges only
+    // Token-aware trimming.
+    // Always keeps: ALL system messages + first assistant message (character intro).
+    // Trims: oldest regular chat turns first.
     const estimateTokens = (msgs) =>
       msgs.reduce((sum, m) => {
         const c = m.content;
@@ -190,8 +179,6 @@ app.post('/v1/chat/completions', async (req, res) => {
           s + Math.ceil((part.text || part.content || JSON.stringify(part)).length / 4), 0);
         return sum + Math.ceil(JSON.stringify(c).length / 4);
       }, 0);
-
-    const tokenBudget = (MODEL_CONTEXT[nimModel] || 32000) - (max_tokens || 9024);
 
     const protectedMsgs = [], chatHistory = [];
     let firstAssistantSeen = false;
@@ -206,13 +193,15 @@ app.post('/v1/chat/completions', async (req, res) => {
       }
     }
 
+    const contextLimit = MODEL_CONTEXT[nimModel] || 32000;
+    const tokenBudget  = contextLimit - (max_tokens || 9024) - estimateTokens(protectedMsgs);
     const kept = [];
-    let budget = tokenBudget - estimateTokens(protectedMsgs);
+    let remaining = tokenBudget;
     for (let i = chatHistory.length - 1; i >= 0; i--) {
       const t = estimateTokens([chatHistory[i]]);
-      if (budget - t < 0) break;
+      if (remaining - t < 0) break;
       kept.unshift(chatHistory[i]);
-      budget -= t;
+      remaining -= t;
     }
     const trimmedMessages = [...protectedMsgs, ...kept];
 
@@ -248,9 +237,9 @@ app.post('/v1/chat/completions', async (req, res) => {
       res.setHeader('Cache-Control', 'no-cache');
       res.setHeader('Connection', 'keep-alive');
 
-      // Stream-level timeout - if NVIDIA hangs mid-stream, ends cleanly
+      // Stream-level timeout - ends cleanly if NVIDIA hangs mid-stream
       const streamTimeout = setTimeout(() => {
-        console.error(`[STREAM] Timeout after ${TIMEOUT_MS / 60000} min - NVIDIA hung mid-stream, ending response`);
+        console.error(`[STREAM] Timeout after ${TIMEOUT_MS / 60000} min - NVIDIA hung mid-stream`);
         if (!res.writableEnded) res.end();
       }, TIMEOUT_MS);
 
@@ -316,14 +305,14 @@ app.post('/v1/chat/completions', async (req, res) => {
     }
 
   } catch (err) {
+    // Read stream buffer before logging so NIM errors are readable (not [circular])
     let nimError = err.response?.data;
     if (nimError && typeof nimError.pipe === 'function') {
       nimError = await new Promise((resolve) => {
         let raw = '';
         nimError.on('data', chunk => raw += chunk.toString());
         nimError.on('end', () => {
-          try { resolve(JSON.parse(raw)); }
-          catch { resolve(raw); }
+          try { resolve(JSON.parse(raw)); } catch { resolve(raw); }
         });
         nimError.on('error', () => resolve('[stream read error]'));
       });
