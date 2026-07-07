@@ -67,17 +67,21 @@ const THINKING_PARAM_BUILDERS = {
   deepseek: () => ({ thinking: true }),
   nemotron: () => ({ enable_thinking: true }),
   minimax:  () => ({ thinking_mode: 'enabled' }),
-  // GLM on NIM: model thinks internally by default but strips reasoning from
-  // the response unless clear_thinking is explicitly false.
-  // Confirmed working for GLM-5 and GLM-4.7 on NIM via empirical testing.
-  // GLM-5.2 uses this same pattern (unconfirmed - model launched today,
-  // still DEGRADED). If thinking doesn't appear once stable, try
-  // { reasoning_effort: 'max' } instead.
-  glm: () => ({ enable_thinking: true, clear_thinking: false }),
+  
+  // GLM 5.2 on NIM: Requires parameters to be nested inside chat_template_kwargs
+  // at the root of the JSON payload to successfully trigger and return reasoning_content.
+  glm: () => ({ 
+    chat_template_kwargs: { 
+      enable_thinking: true, 
+      clear_thinking: false 
+    } 
+  }),
 };
 
 function getModelFamily(nimModel) {
+  // Check exact match for GLM 5.2
   if (nimModel === 'z-ai/glm-5.2') return 'glm';
+  
   if (nimModel.startsWith('deepseek-ai/')) return 'deepseek';
   if (nimModel.startsWith('nvidia/nemotron')) return 'nemotron';
   if (nimModel.startsWith('minimaxai/')) return 'minimax';
@@ -92,8 +96,9 @@ const THINKING_ENABLED_MODELS = [
   'deepseek-ai/deepseek-v4-flash',
   'nvidia/nemotron-3-super-120b-a12b',
   'minimaxai/minimax-m3',
-  'z-ai/glm-5.2',  // added
+  'z-ai/glm-5.2',  
 ];
+
 
 // --- SAFE JSON STRINGIFY ---
 // Prevents circular reference crashes when logging network errors
