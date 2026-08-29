@@ -45,7 +45,7 @@ const MODEL_MAPPING = {
 
 // --- PER-MODEL CONTEXT LIMITS ---
 const MODEL_CONTEXT = {
-  'deepseek-ai/deepseek-v4-pro':                1000000,
+  'deepseek-ai/deepseek-v4-pro-0813':                1000000,
   'deepseek-ai/deepseek-v4-flash':              1000000,
   'deepseek-ai/deepseek-v3.2':                   128000,
   'deepseek-ai/deepseek-v3.1':                   128000,
@@ -86,7 +86,7 @@ const THINKING_ENABLED_MODELS = [
   'moonshotai/kimi-k2-thinking',
   'deepseek-ai/deepseek-v3.1',
   'deepseek-ai/deepseek-v3.2',
-  'deepseek-ai/deepseek-v4-pro',
+  'deepseek-ai/deepseek-v4-pro-0813',
   'deepseek-ai/deepseek-v4-flash',
   'nvidia/nemotron-3-super-120b-a12b',
   'minimaxai/minimax-m3',
