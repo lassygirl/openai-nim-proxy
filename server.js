@@ -26,14 +26,13 @@ const TIMEOUT_MS = 600000; // 10 minutes
 
 // --- MODEL MAPPING ---
 const MODEL_MAPPING = {
-  'gpt-4o':                'deepseek-ai/deepseek-v4-pro',         // DeepSeek V4 Pro - 1.6T params, 1M ctx
+  'gpt-4o':                'deepseek-ai/deepseek-v4-pro-0813',         // DeepSeek V4 Pro - 1.6T params, 1M ctx
   'gpt-4-turbo':           'deepseek-ai/deepseek-v4-flash',        // DeepSeek V4 Flash - fast version, 1M ctx
   'gpt-4':                 'z-ai/glm-5.2',                         // GLM-5.2 - 753B, 1M ctx. Thinks by default at MAX
-                                                                     // effort - no parameter needed. DEGRADED errors are
-                                                                     // a known NIM infra issue, not a code problem; wait it out.
+                                                             
   'gpt-4-32k':             'google/gemma-4-31b-it',               // MiniMax M2.7 - 230B, coding + reasoning
   'gpt-4-vision':          'minimaxai/minimax-m3',                 // MiniMax M3 - multimodal, 1M ctx
-  'gemini-pro':            'moonshotai/kimi-k2.6',                 // Kimi K2.6 - 1T params, 32B active, multimodal
+  'gemini-pro':            'moonshotai/kimi-k3',                 // Kimi K2.6 - 1T params, 32B active, multimodal
   'gpt-3.5-turbo':         'moonshotai/kimi-k2.5',                 // Kimi K2.5 - 128K ctx
   'gpt-3.5-turbo-instruct':'moonshotai/kimi-k2-thinking',          // Kimi K2 Thinking - 256K ctx, reasoning traces
   'claude-3-opus':         'deepseek-ai/deepseek-v3.2',            // DeepSeek V3.2 - 128K ctx
