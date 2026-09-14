@@ -6,7 +6,6 @@ const axios = require('axios');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middleware - 200mb to handle large Janitor AI payloads with reasoning history
 app.use(cors());
 app.use(express.json({ limit: '200mb' }));
 app.use(express.urlencoded({ limit: '200mb', extended: true }));
@@ -18,41 +17,34 @@ const PROXY_API_KEY = process.env.PROXY_API_KEY || null;
 
 const SHOW_REASONING       = true;
 const ENABLE_THINKING_MODE = true;
-
-// --- TIMEOUT CONFIG ---
-// Change this one value to adjust ALL timeouts across the proxy.
-// 5 min = 300000 | 8 min = 480000 | 10 min = 600000 | 15 min = 900000
 const TIMEOUT_MS = 600000; // 10 minutes
 
 // --- MODEL MAPPING ---
 const MODEL_MAPPING = {
-  'gpt-4o':                'deepseek-ai/deepseek-v4-pro-0813',         // DeepSeek V4 Pro - 1.6T params, 1M ctx
-  'gpt-4-turbo':           'deepseek-ai/deepseek-v4-flash',        // DeepSeek V4 Flash - fast version, 1M ctx
-  'gpt-4':                 'z-ai/glm-5.2',                         // GLM-5.2 - 753B, 1M ctx. Thinks by default at MAX
-                                                             
-  'gpt-4-32k':             'google/gemma-4-31b-it',               // MiniMax M2.7 - 230B, coding + reasoning
-  'gpt-4-vision':          'minimaxai/minimax-m3',                 // MiniMax M3 - multimodal, 1M ctx
-  'gemini-pro':            'moonshotai/kimi-k3',                 // Kimi K2.6 - 1T params, 32B active, multimodal
-  'gpt-3.5-turbo':         'moonshotai/kimi-k2.5',                 // Kimi K2.5 - 128K ctx
-  'gpt-3.5-turbo-instruct':'moonshotai/kimi-k2-thinking',          // Kimi K2 Thinking - 256K ctx, reasoning traces
-  'claude-3-opus':         'deepseek-ai/deepseek-v3.2',            // DeepSeek V3.2 - 128K ctx
-  'claude-3-sonnet':       'google/gemma-4-31b-it',                // Gemma 4 31B - 256K ctx
-  'claude-3-haiku':        'qwen/qwen3-coder-480b-a35b-instruct',  // Qwen3 Coder 480B
-  'claude-instant':        'nvidia/nemotron-3-super-120b-a12b',    // Nemotron Super - 1M ctx, never forgets
-  'gpt-4o-mini':           'qwen/qwen3-235b-a22b',                 // Qwen3 235B MoE
-  'gpt-4-1106-preview':    'deepseek-ai/deepseek-v3.1',            // DeepSeek V3.1 - 128K ctx
+  // 'gpt-4o': deprecated (deepseek-v4-pro-0813), no replacement yet
+  'gpt-4-turbo':           'deepseek-ai/deepseek-v4-flash-0731',
+  // 'gpt-4': deprecated (glm-5.2 free endpoint pulled), no replacement yet
+  'gpt-4-32k':             'minimaxai/minimax-m2.7',
+  'gpt-4-vision':          'minimaxai/minimax-m3',
+  'gemini-pro':            'moonshotai/kimi-k3',
+  'gpt-3.5-turbo':         'moonshotai/kimi-k2.5',
+  'gpt-3.5-turbo-instruct':'moonshotai/kimi-k2-thinking',
+  'claude-3-opus':         'deepseek-ai/deepseek-v3.2',
+  'claude-3-sonnet':       'google/gemma-4-31b-it',
+  'claude-3-haiku':        'qwen/qwen3-coder-480b-a35b-instruct',
+  'claude-instant':        'nvidia/nemotron-3-super-120b-a12b',
+  'gpt-4o-mini':           'qwen/qwen3-235b-a22b',
+  'gpt-4-1106-preview':    'deepseek-ai/deepseek-v3.1',
 };
 
-// --- PER-MODEL CONTEXT LIMITS ---
+// --- CONTEXT LIMITS ---
 const MODEL_CONTEXT = {
-  'deepseek-ai/deepseek-v4-pro-0813':                1000000,
-  'deepseek-ai/deepseek-v4-flash':              1000000,
+  'deepseek-ai/deepseek-v4-flash-0731':         1000000,
   'deepseek-ai/deepseek-v3.2':                   128000,
   'deepseek-ai/deepseek-v3.1':                   128000,
-  'z-ai/glm-5.2':                               1000000,
   'minimaxai/minimax-m2.7':                       32000,
   'minimaxai/minimax-m3':                       1000000,
-  'moonshotai/kimi-k2.6':                        131072,
+  'moonshotai/kimi-k3':                         1000000,
   'moonshotai/kimi-k2.5':                        128000,
   'moonshotai/kimi-k2-thinking':                 256000,
   'qwen/qwen3-coder-480b-a35b-instruct':          32000,
@@ -61,55 +53,48 @@ const MODEL_CONTEXT = {
   'google/gemma-4-31b-it':                       256000,
 };
 
-// --- THINKING ---
+// --- THINKING PARAMS ---
+// location 'root' = merged into request root. 'ctk' = nested under chat_template_kwargs.
 const THINKING_PARAM_BUILDERS = {
-  deepseek: () => ({ thinking: true }),
-  nemotron: () => ({ enable_thinking: true }),
-  minimax:  () => ({ thinking_mode: 'enabled' }),
-  glm: () => ({ 
-      enable_thinking: true, 
-      clear_thinking: false 
-    }),
+  deepseek_v3: () => ({ location: 'ctk',  params: { thinking: true } }),
+  deepseek_v4: () => ({ location: 'ctk',  params: { thinking: true, reasoning_effort: 'high' } }),
+  kimi_k3:     () => ({ location: 'root', params: { reasoning_effort: 'max' } }),
+  nemotron:    () => ({ location: 'ctk',  params: { enable_thinking: true } }),
+  minimax:     () => ({ location: 'ctk',  params: { thinking_mode: 'enabled' } }),
+  glm:         () => ({ location: 'ctk',  params: { enable_thinking: true } }),
 };
 
 function getModelFamily(nimModel) {
-  // Check exact match for GLM 5.2
-  if (nimModel === 'z-ai/glm-5.2') return 'glm';
-  
-  if (nimModel.startsWith('deepseek-ai/')) return 'deepseek';
+  if (nimModel === 'moonshotai/kimi-k3') return 'kimi_k3';
+  if (nimModel === 'deepseek-ai/deepseek-v4-flash-0731') return 'deepseek_v4';
+  if (nimModel.startsWith('deepseek-ai/')) return 'deepseek_v3';
   if (nimModel.startsWith('nvidia/nemotron')) return 'nemotron';
   if (nimModel.startsWith('minimaxai/')) return 'minimax';
+  if (nimModel.startsWith('z-ai/')) return 'glm';
   return null;
 }
 
 const THINKING_ENABLED_MODELS = [
-  'moonshotai/kimi-k2-thinking',
   'deepseek-ai/deepseek-v3.1',
   'deepseek-ai/deepseek-v3.2',
-  'deepseek-ai/deepseek-v4-pro-0813',
-  'deepseek-ai/deepseek-v4-flash',
+  'deepseek-ai/deepseek-v4-flash-0731',
+  'moonshotai/kimi-k3',
   'nvidia/nemotron-3-super-120b-a12b',
   'minimaxai/minimax-m3',
-  'z-ai/glm-5.2',  
 ];
 
-
-// --- SAFE JSON STRINGIFY ---
-// Prevents circular reference crashes when logging network errors
 function safeStringify(obj) {
   try { return JSON.stringify(obj); } catch (_) { return '[circular or unstringifiable]'; }
 }
 
-// --- AUTH MIDDLEWARE ---
+// --- AUTH ---
 function checkAuth(req, res, next) {
   if (req.path === '/health') return next();
   if (!PROXY_API_KEY) return next();
   const authHeader = req.headers['authorization'];
   const provided = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
   if (provided !== PROXY_API_KEY) {
-    return res.status(401).json({
-      error: { message: 'Invalid or missing proxy API key.', type: 'authentication_error', code: 401 }
-    });
+    return res.status(401).json({ error: { message: 'Invalid or missing proxy API key.', type: 'authentication_error', code: 401 } });
   }
   next();
 }
@@ -130,72 +115,51 @@ app.get('/health', (req, res) => {
 });
 
 app.get('/v1/models', (req, res) => {
-  const models = Object.keys(MODEL_MAPPING).map(id => ({
-    id, object: 'model', created: Date.now(), owned_by: 'nvidia-nim-proxy'
-  }));
+  const models = Object.keys(MODEL_MAPPING).map(id => ({ id, object: 'model', created: Date.now(), owned_by: 'nvidia-nim-proxy' }));
   res.json({ object: 'list', data: models });
 });
 
 app.post('/v1/chat/completions', async (req, res) => {
   try {
     const { model, messages, temperature, max_tokens, stream } = req.body;
-
     console.log(`[REQ] model=${model} | max_tokens=${max_tokens} | stream=${stream}`);
 
     if (!Array.isArray(messages) || messages.length === 0) {
-      return res.status(400).json({
-        error: { message: 'messages must be a non-empty array', type: 'invalid_request_error', code: 400 }
-      });
+      return res.status(400).json({ error: { message: 'messages must be a non-empty array', type: 'invalid_request_error', code: 400 } });
     }
 
-    // Resolve NIM model
-    const nimModel = MODEL_MAPPING[model] || (() => {
-      const m = model.toLowerCase();
-      if (m.includes('gpt-4') || m.includes('opus') || m.includes('405b')) return 'deepseek-ai/deepseek-v4-pro';
-      if (m.includes('claude') || m.includes('gemini') || m.includes('70b')) return 'z-ai/glm-5.2';
-      return 'nvidia/nemotron-3-super-120b-a12b';
-    })();
+    const nimModel = MODEL_MAPPING[model] || null;
+    if (!nimModel) {
+      return res.status(503).json({ error: { message: `No NIM model mapped for '${model}'.`, type: 'invalid_request_error', code: 503 } });
+    }
 
-    // Strip <think> blocks from incoming history.
-    // SHOW_REASONING injects <think> blocks into responses; Janitor AI stores
-    // and resends them. Stripping keeps payloads from growing every turn.
+    // Strip <think> blocks from incoming history to stop payload bloat
     const stripThink = (content) => {
-      if (typeof content === 'string')
-        return content.replace(/<think>[\s\S]*?<\/think>\n*/g, '').trim();
+      if (typeof content === 'string') return content.replace(/<think>[\s\S]*?<\/think>\n*/g, '').trim();
       return content;
     };
     const cleanMessages = messages.map(m => ({ ...m, content: stripThink(m.content) }));
 
-    // Token-aware trimming.
-    // Always keeps: ALL system messages + first assistant message (character intro).
-    // Trims: oldest regular chat turns first.
-    const estimateTokens = (msgs) =>
-      msgs.reduce((sum, m) => {
-        const c = m.content;
-        if (!c) return sum;
-        if (typeof c === 'string') return sum + Math.ceil(c.length / 4);
-        if (Array.isArray(c)) return sum + c.reduce((s, part) =>
-          s + Math.ceil((part.text || part.content || JSON.stringify(part)).length / 4), 0);
-        return sum + Math.ceil(JSON.stringify(c).length / 4);
-      }, 0);
+    // Token-aware trim: keep system msgs + first assistant msg, trim oldest history
+    const estimateTokens = (msgs) => msgs.reduce((sum, m) => {
+      const c = m.content;
+      if (!c) return sum;
+      if (typeof c === 'string') return sum + Math.ceil(c.length / 4);
+      if (Array.isArray(c)) return sum + c.reduce((s, part) => s + Math.ceil((part.text || part.content || JSON.stringify(part)).length / 4), 0);
+      return sum + Math.ceil(JSON.stringify(c).length / 4);
+    }, 0);
 
     const protectedMsgs = [], chatHistory = [];
     let firstAssistantSeen = false;
     for (const msg of cleanMessages) {
-      if (msg.role === 'system') {
-        protectedMsgs.push(msg);
-      } else if (msg.role === 'assistant' && !firstAssistantSeen) {
-        protectedMsgs.push(msg);
-        firstAssistantSeen = true;
-      } else {
-        chatHistory.push(msg);
-      }
+      if (msg.role === 'system') protectedMsgs.push(msg);
+      else if (msg.role === 'assistant' && !firstAssistantSeen) { protectedMsgs.push(msg); firstAssistantSeen = true; }
+      else chatHistory.push(msg);
     }
 
     const contextLimit = MODEL_CONTEXT[nimModel] || 32000;
-    const tokenBudget  = contextLimit - (max_tokens || 9024) - estimateTokens(protectedMsgs);
+    let remaining = contextLimit - (max_tokens || 9024) - estimateTokens(protectedMsgs);
     const kept = [];
-    let remaining = tokenBudget;
     for (let i = chatHistory.length - 1; i >= 0; i--) {
       const t = estimateTokens([chatHistory[i]]);
       if (remaining - t < 0) break;
@@ -203,10 +167,8 @@ app.post('/v1/chat/completions', async (req, res) => {
       remaining -= t;
     }
     const trimmedMessages = [...protectedMsgs, ...kept];
+    console.log(`[CTX] ${nimModel} | kept ${trimmedMessages.length}/${messages.length} msgs`);
 
-    console.log(`[CTX] ${nimModel} | kept ${trimmedMessages.length}/${messages.length} msgs | trimmed ${messages.length - trimmedMessages.length} oldest`);
-
-    // Build NIM request
     const nimRequest = {
       model: nimModel,
       messages: trimmedMessages,
@@ -218,8 +180,9 @@ app.post('/v1/chat/completions', async (req, res) => {
     if (ENABLE_THINKING_MODE && THINKING_ENABLED_MODELS.includes(nimModel)) {
       const family = getModelFamily(nimModel);
       if (family && THINKING_PARAM_BUILDERS[family]) {
-        // chat_template_kwargs goes at ROOT level - NOT wrapped in "extra_body"
-        nimRequest.chat_template_kwargs = THINKING_PARAM_BUILDERS[family]();
+        const { location, params } = THINKING_PARAM_BUILDERS[family]();
+        if (location === 'root') Object.assign(nimRequest, params);
+        else nimRequest.chat_template_kwargs = params; // root-level key, NOT wrapped in extra_body
       }
     }
 
@@ -236,19 +199,16 @@ app.post('/v1/chat/completions', async (req, res) => {
       res.setHeader('Cache-Control', 'no-cache');
       res.setHeader('Connection', 'keep-alive');
 
-      // Stream-level timeout - ends cleanly if NVIDIA hangs mid-stream
       const streamTimeout = setTimeout(() => {
-        console.error(`[STREAM] Timeout after ${TIMEOUT_MS / 60000} min - NVIDIA hung mid-stream`);
+        console.error(`[STREAM] Timeout after ${TIMEOUT_MS / 60000} min`);
         if (!res.writableEnded) res.end();
       }, TIMEOUT_MS);
 
       let buffer = '', thinkOpen = false;
-
       response.data.on('data', chunk => {
         buffer += chunk.toString();
         const lines = buffer.split('\n');
         buffer = lines.pop() ?? '';
-
         for (const line of lines) {
           if (!line.startsWith('data: ')) continue;
           if (line.includes('[DONE]')) { res.write(line + '\n'); continue; }
@@ -274,18 +234,12 @@ app.post('/v1/chat/completions', async (req, res) => {
           } catch (_) { res.write(line + '\n'); }
         }
       });
-
-      response.data.on('end', () => {
-        clearTimeout(streamTimeout);
-        if (!res.writableEnded) res.end();
-      });
-
+      response.data.on('end', () => { clearTimeout(streamTimeout); if (!res.writableEnded) res.end(); });
       response.data.on('error', err => {
         clearTimeout(streamTimeout);
         console.error('Stream error:', err.message || safeStringify(err));
         if (!res.writableEnded) res.end();
       });
-
     } else {
       res.json({
         id: `chatcmpl-${Date.now()}`,
@@ -304,15 +258,12 @@ app.post('/v1/chat/completions', async (req, res) => {
     }
 
   } catch (err) {
-    // Read stream buffer before logging so NIM errors are readable (not [circular])
     let nimError = err.response?.data;
     if (nimError && typeof nimError.pipe === 'function') {
       nimError = await new Promise((resolve) => {
         let raw = '';
         nimError.on('data', chunk => raw += chunk.toString());
-        nimError.on('end', () => {
-          try { resolve(JSON.parse(raw)); } catch { resolve(raw); }
-        });
+        nimError.on('end', () => { try { resolve(JSON.parse(raw)); } catch { resolve(raw); } });
         nimError.on('error', () => resolve('[stream read error]'));
       });
     }
@@ -329,7 +280,6 @@ app.post('/v1/chat/completions', async (req, res) => {
   }
 });
 
-// Alias routes
 app.post('/chat/completions', (req, res, next) => { req.url = '/v1/chat/completions'; app.handle(req, res, next); });
 app.get('/models', (req, res, next) => { req.url = '/v1/models'; app.handle(req, res, next); });
 
