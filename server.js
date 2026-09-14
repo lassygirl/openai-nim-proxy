@@ -209,6 +209,9 @@ app.post('/v1/chat/completions', async (req, res) => {
       }, TIMEOUT_MS);
 
       let buffer = '', thinkOpen = false;
+      let debugChunksLogged = 0;
+      const DEBUG_RAW = nimModel === 'moonshotai/kimi-k3'; // temporary - remove once reasoning field is confirmed
+
       response.data.on('data', chunk => {
         buffer += chunk.toString();
         const lines = buffer.split('\n');
@@ -216,6 +219,10 @@ app.post('/v1/chat/completions', async (req, res) => {
         for (const line of lines) {
           if (!line.startsWith('data: ')) continue;
           if (line.includes('[DONE]')) { res.write(line + '\n'); continue; }
+          if (DEBUG_RAW && debugChunksLogged < 15 && line.trim() !== 'data: ') {
+            console.log('[RAW NIM CHUNK]', line);
+            debugChunksLogged++;
+          }
           try {
             const data = JSON.parse(line.slice(6));
             const delta = data.choices?.[0]?.delta;
