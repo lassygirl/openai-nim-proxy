@@ -187,7 +187,11 @@ app.post('/v1/chat/completions', async (req, res) => {
     }
 
     const response = await axios.post(`${NIM_API_BASE}/chat/completions`, nimRequest, {
-      headers: { Authorization: `Bearer ${NIM_API_KEY}`, 'Content-Type': 'application/json' },
+      headers: {
+        Authorization: `Bearer ${NIM_API_KEY}`,
+        'Content-Type': 'application/json',
+        Accept: stream ? 'text/event-stream' : 'application/json',
+      },
       maxBodyLength: Infinity,
       maxContentLength: Infinity,
       responseType: stream ? 'stream' : 'json',
@@ -216,7 +220,7 @@ app.post('/v1/chat/completions', async (req, res) => {
             const data = JSON.parse(line.slice(6));
             const delta = data.choices?.[0]?.delta;
             if (delta) {
-              const reasoning = delta.reasoning_content;
+              const reasoning = delta.reasoning_content ?? delta.reasoning; // NIM isn't consistent - some models use one name, some the other
               const content   = delta.content;
               if (SHOW_REASONING) {
                 let out = '';
@@ -229,6 +233,7 @@ app.post('/v1/chat/completions', async (req, res) => {
                 delta.content = content ?? '';
               }
               delete delta.reasoning_content;
+              delete delta.reasoning;
             }
             res.write(`data: ${JSON.stringify(data)}\n\n`);
           } catch (_) { res.write(line + '\n'); }
@@ -248,8 +253,9 @@ app.post('/v1/chat/completions', async (req, res) => {
         model,
         choices: response.data.choices.map(c => {
           let content = c.message?.content ?? '';
-          if (SHOW_REASONING && c.message?.reasoning_content) {
-            content = `<think>\n${c.message.reasoning_content}\n</think>\n\n${content}`;
+          const reasoning = c.message?.reasoning_content ?? c.message?.reasoning;
+          if (SHOW_REASONING && reasoning) {
+            content = `<think>\n${reasoning}\n</think>\n\n${content}`;
           }
           return { index: c.index, message: { role: c.message.role, content }, finish_reason: c.finish_reason };
         }),
