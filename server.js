@@ -23,7 +23,7 @@ const TIMEOUT_MS = 600000; // 10 minutes
 const MODEL_MAPPING = {
   // 'gpt-4o': deprecated (deepseek-v4-pro-0813), no replacement yet
   'gpt-4-turbo':           'deepseek-ai/deepseek-v4-flash-0731',
-  // 'gpt-4': deprecated (glm-5.2 free endpoint pulled), no replacement yet
+  'gpt-4':                 'z-ai/glm-5.3',
   'gpt-4-32k':             'minimaxai/minimax-m2.7',
   'gpt-4-vision':          'minimaxai/minimax-m3',
   'gemini-pro':            'moonshotai/kimi-k3',
@@ -51,6 +51,7 @@ const MODEL_CONTEXT = {
   'qwen/qwen3-235b-a22b':                         32000,
   'nvidia/nemotron-3-super-120b-a12b':          1000000,
   'google/gemma-4-31b-it':                       256000,
+  'z-ai/glm-5.3':                                1000000,
 };
 
 // --- THINKING PARAMS ---
@@ -81,6 +82,7 @@ const THINKING_ENABLED_MODELS = [
   'moonshotai/kimi-k3',
   'nvidia/nemotron-3-super-120b-a12b',
   'minimaxai/minimax-m3',
+  'z-ai/glm-5.3',
 ];
 
 function safeStringify(obj) {
