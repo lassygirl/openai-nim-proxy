@@ -17,7 +17,8 @@ const PROXY_API_KEY = process.env.PROXY_API_KEY || null;
 
 const SHOW_REASONING       = true;
 const ENABLE_THINKING_MODE = true;
-const TIMEOUT_MS = 1200000; // 20 minutes
+const TIMEOUT_MS = 600000; // 10 minutes
+const MAX_ALLOWED_TOKENS = 4096; // hard cap regardless of what the client requests - prevents "unlimited" settings from causing multi-minute reasoning + generation that outruns TIMEOUT_MS
 
 // --- MODEL MAPPING ---
 const MODEL_MAPPING = {
@@ -62,7 +63,7 @@ const THINKING_PARAM_BUILDERS = {
   kimi_k3:     () => ({ location: 'ctk',  params: { reasoning_effort: 'max' } }),
   nemotron:    () => ({ location: 'ctk',  params: { enable_thinking: true } }),
   minimax:     () => ({ location: 'ctk',  params: { thinking_mode: 'enabled' } }),
-  glm:         () => ({ location: 'ctk',  params: { enable_thinking: true } }),
+  glm:         () => ({ location: 'ctk',  params: { enable_thinking: true, reasoning_effort: 'low', clear_thinking: true } }),
 };
 
 function getModelFamily(nimModel) {
@@ -159,8 +160,10 @@ app.post('/v1/chat/completions', async (req, res) => {
       else chatHistory.push(msg);
     }
 
+    const cappedMaxTokens = Math.min(max_tokens || 9024, MAX_ALLOWED_TOKENS);
+
     const contextLimit = MODEL_CONTEXT[nimModel] || 32000;
-    let remaining = contextLimit - (max_tokens || 9024) - estimateTokens(protectedMsgs);
+    let remaining = contextLimit - cappedMaxTokens - estimateTokens(protectedMsgs);
     const kept = [];
     for (let i = chatHistory.length - 1; i >= 0; i--) {
       const t = estimateTokens([chatHistory[i]]);
@@ -175,7 +178,7 @@ app.post('/v1/chat/completions', async (req, res) => {
       model: nimModel,
       messages: trimmedMessages,
       temperature: temperature ?? 0.6,
-      max_tokens: max_tokens ?? 9024,
+      max_tokens: cappedMaxTokens,
       stream: stream ?? false,
     };
 
