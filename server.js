@@ -18,7 +18,7 @@ const PROXY_API_KEY = process.env.PROXY_API_KEY || null;
 const SHOW_REASONING       = true;
 const ENABLE_THINKING_MODE = true;
 const TIMEOUT_MS = 600000; // 10 minutes
-const MAX_ALLOWED_TOKENS = 4096; // hard cap regardless of what the client requests - prevents "unlimited" settings from causing multi-minute reasoning + generation that outruns TIMEOUT_MS
+const MAX_ALLOWED_TOKENS = 8192; // raised from 4096 now that GLM-5.3 runs at low reasoning effort - the 4096 cap was truncating replies unnecessarily once the 30-40min runaway-generation issue was fixed at the source
 
 // --- MODEL MAPPING ---
 const MODEL_MAPPING = {
