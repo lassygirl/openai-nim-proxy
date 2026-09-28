@@ -63,7 +63,7 @@ const THINKING_PARAM_BUILDERS = {
   kimi_k3:     () => ({ location: 'ctk',  params: { reasoning_effort: 'max' } }),
   nemotron:    () => ({ location: 'ctk',  params: { enable_thinking: true } }),
   minimax:     () => ({ location: 'ctk',  params: { thinking_mode: 'enabled' } }),
-  glm:         () => ({ location: 'ctk',  params: { enable_thinking: true, reasoning_effort: 'low', clear_thinking: true } }),
+  glm:         () => ({ location: 'ctk',  params: { enable_thinking: true, reasoning_effort: 'max', clear_thinking: true } }),
 };
 
 function getModelFamily(nimModel) {
