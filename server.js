@@ -23,7 +23,7 @@ const MAX_ALLOWED_TOKENS = 8192; // raised from 4096 now that GLM-5.3 runs at lo
 // --- MODEL MAPPING ---
 const MODEL_MAPPING = {
   // 'gpt-4o': deprecated (deepseek-v4-pro-0813), no replacement yet
-  'gpt-4-turbo':           'deepseek-ai/deepseek-v4-flash-0731',
+  'gpt-4-turbo':           'deepseek-ai/deepseek-v4.1-flash',
   'gpt-4':                 'z-ai/glm-5.3',
   'gpt-4-32k':             'minimaxai/minimax-m2.7',
   'gpt-4-vision':          'minimaxai/minimax-m3',
@@ -40,7 +40,7 @@ const MODEL_MAPPING = {
 
 // --- CONTEXT LIMITS ---
 const MODEL_CONTEXT = {
-  'deepseek-ai/deepseek-v4-flash-0731':         1000000,
+  'deepseek-ai/deepseek-v4.1-flash':         1000000,
   'deepseek-ai/deepseek-v3.2':                   128000,
   'deepseek-ai/deepseek-v3.1':                   128000,
   'minimaxai/minimax-m2.7':                       32000,
@@ -68,8 +68,7 @@ const THINKING_PARAM_BUILDERS = {
 
 function getModelFamily(nimModel) {
   if (nimModel === 'moonshotai/kimi-k3') return 'kimi_k3';
-  if (nimModel === 'deepseek-ai/deepseek-v4-flash-0731') return 'deepseek_v4';
-  if (nimModel.startsWith('deepseek-ai/')) return 'deepseek_v3';
+  if (nimModel === 'deepseek-ai/deepseek-v4.1-flash') return 'deepseek_v4';
   if (nimModel.startsWith('nvidia/nemotron')) return 'nemotron';
   if (nimModel.startsWith('minimaxai/')) return 'minimax';
   if (nimModel.startsWith('z-ai/')) return 'glm';
@@ -79,7 +78,7 @@ function getModelFamily(nimModel) {
 const THINKING_ENABLED_MODELS = [
   'deepseek-ai/deepseek-v3.1',
   'deepseek-ai/deepseek-v3.2',
-  'deepseek-ai/deepseek-v4-flash-0731',
+  'deepseek-ai/deepseek-v4.1-flash',
   'moonshotai/kimi-k3',
   'nvidia/nemotron-3-super-120b-a12b',
   'minimaxai/minimax-m3',
