@@ -17,7 +17,7 @@ const PROXY_API_KEY = process.env.PROXY_API_KEY || null;
 
 const SHOW_REASONING       = true;
 const ENABLE_THINKING_MODE = true;
-const TIMEOUT_MS = 600000; // 10 minutes
+const TIMEOUT_MS = 1200000; // 10 minutes
 const MAX_ALLOWED_TOKENS = 8192; // raised from 4096 now that GLM-5.3 runs at low reasoning effort - the 4096 cap was truncating replies unnecessarily once the 30-40min runaway-generation issue was fixed at the source
 
 // --- MODEL MAPPING ---
@@ -25,7 +25,7 @@ const MODEL_MAPPING = {
   // 'gpt-4o': deprecated (deepseek-v4-pro-0813), no replacement yet
   'gpt-4-turbo':           'deepseek-ai/deepseek-v4.1-flash',
   'gpt-4':                 'z-ai/glm-5.3',
-  'gpt-4-32k':             'minimaxai/minimax-m2.7',
+  'gpt-4-32k':             'z-ai/glm-5.3-flash',
   'gpt-4-vision':          'minimaxai/minimax-m3',
   'gemini-pro':            'moonshotai/kimi-k3',
   'gpt-3.5-turbo':         'moonshotai/kimi-k2.5',
@@ -42,7 +42,7 @@ const MODEL_MAPPING = {
 const MODEL_CONTEXT = {
   'deepseek-ai/deepseek-v4.1-flash':         1000000,
   'deepseek-ai/deepseek-v3.2':                   128000,
-  'deepseek-ai/deepseek-v3.1':                   128000,
+  'z-ai/glm-5.3-flash':                   128000,
   'minimaxai/minimax-m2.7':                       32000,
   'minimaxai/minimax-m3':                       1000000,
   'moonshotai/kimi-k3':                         1000000,
@@ -76,7 +76,7 @@ function getModelFamily(nimModel) {
 }
 
 const THINKING_ENABLED_MODELS = [
-  'deepseek-ai/deepseek-v3.1',
+  'z-ai/glm-5.3-flash',
   'deepseek-ai/deepseek-v3.2',
   'deepseek-ai/deepseek-v4.1-flash',
   'moonshotai/kimi-k3',
