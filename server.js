@@ -17,8 +17,8 @@ const PROXY_API_KEY = process.env.PROXY_API_KEY || null;
 
 const SHOW_REASONING       = true;
 const ENABLE_THINKING_MODE = true;
-const TIMEOUT_MS = 1200000; // 10 minutes
-const MAX_ALLOWED_TOKENS = 10960
+const TIMEOUT_MS = 1200000; // 20 minutes
+const MAX_ALLOWED_TOKENS = 16000
 
 // --- MODEL MAPPING ---
 const MODEL_MAPPING = {
