@@ -20,39 +20,35 @@ const ENABLE_THINKING_MODE = true;
 const TIMEOUT_MS = 1200000; // 20 minutes
 const MAX_ALLOWED_TOKENS = 40000
 
+// Step 5 Preview always thinks. Depth is low | medium | high (model default = high).
+// Leave STEP5_EFFORT unset in Render to use the default. Set it to 'medium' for a shorter think.
+const STEP5_EFFORT = process.env.STEP5_EFFORT || '';
+
 // --- MODEL MAPPING ---
 const MODEL_MAPPING = {
-  // 'gpt-4o': deprecated (deepseek-v4-pro-0813), no replacement yet
+  'gpt-4o':                'stepfun-ai/step-5-preview',
   'gpt-4-turbo':           'deepseek-ai/deepseek-v4.1-flash',
   'gpt-4':                 'z-ai/glm-5.3',
   'gpt-4-32k':             'z-ai/glm-5.3-flash',
   'gpt-4-vision':          'minimaxai/minimax-m3',
-  'gemini-pro':            'moonshotai/kimi-k3',
   'gpt-3.5-turbo':         'moonshotai/kimi-k2.5',
   'gpt-3.5-turbo-instruct':'moonshotai/kimi-k2-thinking',
   'claude-3-opus':         'deepseek-ai/deepseek-v3.2',
-  'claude-3-sonnet':       'google/gemma-4-31b-it',
-  'claude-3-haiku':        'qwen/qwen3-coder-480b-a35b-instruct',
   'claude-instant':        'nvidia/nemotron-3-super-120b-a12b',
-  'gpt-4o-mini':           'qwen/qwen3-235b-a22b',
   'gpt-4-1106-preview':    'deepseek-ai/deepseek-v3.1',
 };
 
 // --- CONTEXT LIMITS ---
 const MODEL_CONTEXT = {
-  'deepseek-ai/deepseek-v4.1-flash':         1000000,
+  'stepfun-ai/step-5-preview':                  1000000,
+  'deepseek-ai/deepseek-v4.1-flash':            1000000,
   'deepseek-ai/deepseek-v3.2':                   128000,
-  'z-ai/glm-5.3-flash':                   128000,
-  'minimaxai/minimax-m2.7':                       32000,
+  'z-ai/glm-5.3-flash':                          128000,
   'minimaxai/minimax-m3':                       1000000,
-  'moonshotai/kimi-k3':                         1000000,
   'moonshotai/kimi-k2.5':                        128000,
   'moonshotai/kimi-k2-thinking':                 256000,
-  'qwen/qwen3-coder-480b-a35b-instruct':          32000,
-  'qwen/qwen3-235b-a22b':                         32000,
   'nvidia/nemotron-3-super-120b-a12b':          1000000,
-  'google/gemma-4-31b-it':                       256000,
-  'z-ai/glm-5.3':                                1000000,
+  'z-ai/glm-5.3':                               1000000,
 };
 
 // --- THINKING PARAMS ---
@@ -60,14 +56,15 @@ const MODEL_CONTEXT = {
 const THINKING_PARAM_BUILDERS = {
   deepseek_v3: () => ({ location: 'ctk',  params: { thinking: true } }),
   deepseek_v4: () => ({ location: 'ctk',  params: { thinking: true, reasoning_effort: 'high' } }),
-  kimi_k3:     () => ({ location: 'ctk',  params: { reasoning_effort: 'max' } }),
   nemotron:    () => ({ location: 'ctk',  params: { enable_thinking: true } }),
   minimax:     () => ({ location: 'ctk',  params: { thinking_mode: 'enabled' } }),
   glm:         () => ({ location: 'ctk',  params: { enable_thinking: true, reasoning_effort: 'high', clear_thinking: true } }),
+  // Step 5 always thinks, so nothing is sent unless STEP5_EFFORT is set.
+  step5:       () => ({ location: 'root', params: STEP5_EFFORT ? { reasoning_effort: STEP5_EFFORT } : {} }),
 };
 
 function getModelFamily(nimModel) {
-  if (nimModel === 'moonshotai/kimi-k3') return 'kimi_k3';
+  if (nimModel === 'stepfun-ai/step-5-preview') return 'step5';
   if (nimModel === 'deepseek-ai/deepseek-v4.1-flash') return 'deepseek_v4';
   if (nimModel.startsWith('nvidia/nemotron')) return 'nemotron';
   if (nimModel.startsWith('minimaxai/')) return 'minimax';
@@ -76,10 +73,10 @@ function getModelFamily(nimModel) {
 }
 
 const THINKING_ENABLED_MODELS = [
+  'stepfun-ai/step-5-preview',
   'z-ai/glm-5.3-flash',
   'deepseek-ai/deepseek-v3.2',
   'deepseek-ai/deepseek-v4.1-flash',
-  'moonshotai/kimi-k3',
   'nvidia/nemotron-3-super-120b-a12b',
   'minimaxai/minimax-m3',
   'z-ai/glm-5.3',
@@ -213,8 +210,6 @@ app.post('/v1/chat/completions', async (req, res) => {
       }, TIMEOUT_MS);
 
       let buffer = '', thinkOpen = false;
-      let debugChunksLogged = 0;
-      const DEBUG_RAW = nimModel === 'moonshotai/kimi-k3'; // temporary - remove once reasoning field is confirmed
 
       response.data.on('data', chunk => {
         buffer += chunk.toString();
@@ -223,10 +218,6 @@ app.post('/v1/chat/completions', async (req, res) => {
         for (const line of lines) {
           if (!line.startsWith('data: ')) continue;
           if (line.includes('[DONE]')) { res.write(line + '\n'); continue; }
-          if (DEBUG_RAW && debugChunksLogged < 15 && line.trim() !== 'data: ') {
-            console.log('[RAW NIM CHUNK]', line);
-            debugChunksLogged++;
-          }
           try {
             const data = JSON.parse(line.slice(6));
             const delta = data.choices?.[0]?.delta;
@@ -316,5 +307,6 @@ app.listen(PORT, () => {
   console.log('Reasoning:       ' + (SHOW_REASONING ? 'ENABLED' : 'DISABLED'));
   console.log('Thinking mode:   ' + (ENABLE_THINKING_MODE ? 'ENABLED' : 'DISABLED'));
   console.log('Timeout:         ' + (TIMEOUT_MS / 60000) + ' minutes');
+  console.log('Step 5 effort:   ' + (STEP5_EFFORT || 'model default (high)'));
   console.log('Models mapped:   ' + Object.keys(MODEL_MAPPING).length + '\n');
 });
