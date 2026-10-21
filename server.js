@@ -54,11 +54,10 @@ const MODEL_CONTEXT = {
 // --- THINKING PARAMS ---
 // location 'root' = merged into request root. 'ctk' = nested under chat_template_kwargs.
 const THINKING_PARAM_BUILDERS = {
-  deepseek_v3: () => ({ location: 'ctk',  params: { thinking: true } }),
   deepseek_v4: () => ({ location: 'ctk',  params: { thinking: true, reasoning_effort: 'high' } }),
   nemotron:    () => ({ location: 'ctk',  params: { enable_thinking: true } }),
   minimax:     () => ({ location: 'ctk',  params: { thinking_mode: 'enabled' } }),
-  glm:         () => ({ location: 'ctk',  params: { enable_thinking: true, reasoning_effort: 'high', clear_thinking: true } }),
+  glm:         () => ({ location: 'ctk',  params: { enable_thinking: true, reasoning_effort: 'max', clear_thinking: true } }),
   // Step 5 always thinks, so nothing is sent unless STEP5_EFFORT is set.
   step5:       () => ({ location: 'root', params: STEP5_EFFORT ? { reasoning_effort: STEP5_EFFORT } : {} }),
 };
