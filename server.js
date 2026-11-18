@@ -21,6 +21,10 @@ const TIMEOUT_MS = 1200000; // 20 minutes
 const MAX_ALLOWED_TOKENS = 40000
 
 const STEP5_EFFORT = process.env.STEP5_EFFORT || '';
+// Kimi K3.1 Pro: valid values are low | high | max (NIM default is low)
+const KIMI_K3_EFFORT = process.env.KIMI_K3_EFFORT || 'max';
+// MiniMax M3.1 Flash: low | medium | high | xhigh | max
+const MINIMAX_M31_EFFORT = process.env.MINIMAX_M31_EFFORT || 'max';
 
 // --- MODEL MAPPING ---
 const MODEL_MAPPING = {
@@ -29,6 +33,7 @@ const MODEL_MAPPING = {
   'gpt-4':                 'z-ai/glm-5.3',
   'gpt-4-32k':             'z-ai/glm-5.3-flash',
   'gpt-4-vision':          'minimaxai/minimax-m3',
+  'gpt-4o-mini':           'minimaxai/minimax-m3.1-flash',
   'gpt-3.5-turbo':         'moonshotai/kimi-k2.5',
   'gpt-3.5-turbo-instruct':'moonshotai/kimi-k2-thinking',
   'claude-3-opus':         'moonshotai/kimi-k3.1-pro',
@@ -43,8 +48,10 @@ const MODEL_CONTEXT = {
   'deepseek-ai/deepseek-v3.2':                   128000,
   'z-ai/glm-5.3-flash':                          128000,
   'minimaxai/minimax-m3':                       1000000,
+  'minimaxai/minimax-m3.1-flash':                262144, // NIM card says up to 1M; raise to 1000000 if NIM accepts it
   'moonshotai/kimi-k2.5':                        128000,
   'moonshotai/kimi-k2-thinking':                 256000,
+  'moonshotai/kimi-k3.1-pro':                   1048576,
   'nvidia/nemotron-3-super-120b-a12b':          1000000,
   'z-ai/glm-5.3':                               1000000,
 };
@@ -55,14 +62,20 @@ const THINKING_PARAM_BUILDERS = {
   deepseek_v4: () => ({ location: 'ctk',  params: { thinking: true, reasoning_effort: 'high' } }),
   nemotron:    () => ({ location: 'ctk',  params: { enable_thinking: true } }),
   minimax:     () => ({ location: 'ctk',  params: { thinking_mode: 'enabled' } }),
+  // MiniMax M3.1 Flash: thinking_mode + reasoning_effort (low|medium|high|xhigh|max) via chat_template_kwargs
+  minimax_m31: () => ({ location: 'ctk',  params: { thinking_mode: 'enabled', reasoning_effort: MINIMAX_M31_EFFORT } }),
   glm:         () => ({ location: 'ctk',  params: { enable_thinking: true, reasoning_effort: 'max', clear_thinking: true } }),
   // Step 5 always thinks, so nothing is sent unless STEP5_EFFORT is set.
   step5:       () => ({ location: 'root', params: STEP5_EFFORT ? { reasoning_effort: STEP5_EFFORT } : {} }),
+  // Kimi K3.1 Pro: root-level reasoning_effort (low | high | max). Defaults to low if omitted, so we force max.
+  kimi_k3:     () => ({ location: 'root', params: { reasoning_effort: KIMI_K3_EFFORT } }),
 };
 
 function getModelFamily(nimModel) {
   if (nimModel === 'stepfun-ai/step-5-preview') return 'step5';
   if (nimModel === 'deepseek-ai/deepseek-v4.1-flash') return 'deepseek_v4';
+  if (nimModel === 'moonshotai/kimi-k3.1-pro') return 'kimi_k3';
+  if (nimModel === 'minimaxai/minimax-m3.1-flash') return 'minimax_m31'; // must come before the generic minimaxai/ check
   if (nimModel.startsWith('nvidia/nemotron')) return 'nemotron';
   if (nimModel.startsWith('minimaxai/')) return 'minimax';
   if (nimModel.startsWith('z-ai/')) return 'glm';
@@ -76,6 +89,8 @@ const THINKING_ENABLED_MODELS = [
   'deepseek-ai/deepseek-v4.1-flash',
   'nvidia/nemotron-3-super-120b-a12b',
   'minimaxai/minimax-m3',
+  'minimaxai/minimax-m3.1-flash',
+  'moonshotai/kimi-k3.1-pro',
   'z-ai/glm-5.3',
 ];
 
@@ -305,5 +320,7 @@ app.listen(PORT, () => {
   console.log('Thinking mode:   ' + (ENABLE_THINKING_MODE ? 'ENABLED' : 'DISABLED'));
   console.log('Timeout:         ' + (TIMEOUT_MS / 60000) + ' minutes');
   console.log('Step 5 effort:   ' + (STEP5_EFFORT || 'model default (high)'));
+  console.log('Kimi K3 effort:  ' + KIMI_K3_EFFORT);
+  console.log('MiniMax M3.1 effort: ' + MINIMAX_M31_EFFORT);
   console.log('Models mapped:   ' + Object.keys(MODEL_MAPPING).length + '\n');
 });
