@@ -20,8 +20,6 @@ const ENABLE_THINKING_MODE = true;
 const TIMEOUT_MS = 1200000; // 20 minutes
 const MAX_ALLOWED_TOKENS = 40000
 
-// Step 5 Preview always thinks. Depth is low | medium | high (model default = high).
-// Leave STEP5_EFFORT unset in Render to use the default. Set it to 'medium' for a shorter think.
 const STEP5_EFFORT = process.env.STEP5_EFFORT || '';
 
 // --- MODEL MAPPING ---
@@ -33,7 +31,7 @@ const MODEL_MAPPING = {
   'gpt-4-vision':          'minimaxai/minimax-m3',
   'gpt-3.5-turbo':         'moonshotai/kimi-k2.5',
   'gpt-3.5-turbo-instruct':'moonshotai/kimi-k2-thinking',
-  'claude-3-opus':         'deepseek-ai/deepseek-v3.2',
+  'claude-3-opus':         'moonshotai/kimi-k3.1-pro',
   'claude-instant':        'nvidia/nemotron-3-super-120b-a12b',
   'gpt-4-1106-preview':    'deepseek-ai/deepseek-v3.1',
 };
